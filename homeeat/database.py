@@ -122,17 +122,20 @@ class Database:
     def create_user(self, username, name, family_id, **kwargs):
         conn = self.get_connection()
         cursor = conn.cursor()
-        
-        # 处理JSON字段
+    
+        # 处理JSON字段：将列表转换为JSON字符串（包括空列表）
         for field in ['diseases', 'allergies', 'likes', 'dislikes']:
-            if field in kwargs and kwargs[field]:
+            if field in kwargs:
                 kwargs[field] = json.dumps(kwargs[field], ensure_ascii=False)
-        
+            else:
+                kwargs[field] = '[]'  # 如果未提供，默认空列表
+    
         fields = ['username', 'name', 'family_id'] + list(kwargs.keys())
         values = [username, name, family_id] + list(kwargs.values())
         placeholders = ', '.join(['?' for _ in fields])
-        
-        cursor.execute(f'INSERT INTO user ({",".join(fields)}) VALUES ({placeholders})', values)
+    
+        query = f'INSERT INTO user ({",".join(fields)}) VALUES ({placeholders})'
+        cursor.execute(query, values)
         user_id = cursor.lastrowid
         conn.commit()
         conn.close()

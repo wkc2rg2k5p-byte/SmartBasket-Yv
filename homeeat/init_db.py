@@ -17,11 +17,12 @@ def init_test_data():
     family_id = db.create_family("相亲相爱一家人")
     print(f"✓ 创建家庭：相亲相爱一家人 (ID: {family_id})")
     
-    # 创建成员
+    # 创建成员（显式指定密码）
     members = [
         {
             'username': 'mama',
             'name': '奶奶',
+            'password': '123456',
             'gender': '女',
             'age': 68,
             'height': 158.0,
@@ -36,6 +37,7 @@ def init_test_data():
         {
             'username': 'momo',
             'name': '妈妈',
+            'password': '123456',
             'gender': '女',
             'age': 38,
             'height': 163.0,
@@ -50,6 +52,7 @@ def init_test_data():
         {
             'username': 'meme',
             'name': '女儿',
+            'password': '123456',
             'gender': '女',
             'age': 10,
             'height': 138.0,
@@ -68,6 +71,7 @@ def init_test_data():
             username=m['username'],
             name=m['name'],
             family_id=family_id,
+            password=m['password'],
             gender=m['gender'],
             age=m['age'],
             height=m['height'],
@@ -83,21 +87,21 @@ def init_test_data():
     
     # 添加示例聊天记录
     messages = [
-        (1, "今晚想吃点清淡的，奶奶血压高不能吃太咸"),
-        (2, "做个鱼怎么样？孩子需要补充营养"),
-        (3, "我想吃肉！但不要海鲜，我过敏"),
-        (1, "那清蒸鲈鱼吧，清淡又有营养"),
-        (2, "再炒个青菜搭配一下"),
-        (3, "好的！我还想吃西红柿炒蛋")
+        ("奶奶", "今晚想吃点清淡的，奶奶血压高不能吃太咸"),
+        ("妈妈", "做个鱼怎么样？孩子需要补充营养"),
+        ("女儿", "我想吃肉！但不要海鲜，我过敏"),
+        ("奶奶", "那清蒸鲈鱼吧，清淡又有营养"),
+        ("妈妈", "再炒个青菜搭配一下"),
+        ("女儿", "好的！我还想吃西红柿炒蛋")
     ]
     
     # 获取用户ID映射
     users = db.get_family_members(family_id)
     name_to_id = {u['name']: u['id'] for u in users}
     
-    for msg_name, msg_text in messages:
-        user_id = name_to_id.get(msg_name, users[0]['id'])
-        db.add_chat_message(family_id, user_id, msg_text)
+    for name, msg in messages:
+        user_id = name_to_id.get(name, users[0]['id'])
+        db.add_chat_message(family_id, user_id, msg)
     
     print("✓ 添加示例聊天记录")
     print("\n" + "=" * 60)

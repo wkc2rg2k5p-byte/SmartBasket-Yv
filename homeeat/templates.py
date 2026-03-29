@@ -11,7 +11,7 @@ BASE_HTML = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title} - HomeEat</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -300,7 +300,7 @@ def home_page(user, members, chat_history, recipe=None, shopping_list=None):
         // 每3秒轮询一次
         setInterval(fetchLatest, 3000);
         
-        // 发送消息后不清空输入框（可选），但为了体验保留
+        // 发送消息后稍等再刷新
         const form = document.getElementById('message-form');
         if (form) {
             form.addEventListener('submit', function(e) {

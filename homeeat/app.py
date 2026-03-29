@@ -11,7 +11,7 @@ import os
 from config import SECRET_KEY, HOST, PORT, DEBUG
 from database import db
 from ai_service import ai_service
-from templates import login_page, home_page, history_page, report_page, chat_partial, recipe_partial
+from templates import login_page, home_page, history_page, report_page, chat_partial
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY

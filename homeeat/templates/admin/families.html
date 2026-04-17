@@ -1,0 +1,75 @@
+{% extends "admin/base.html" %}
+{% block title %}家庭管理{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>👨‍👩‍👧‍👦 家庭管理</h2>
+    <button class="btn btn-primary" onclick="openModal('addModal')">➕ 创建家庭</button>
+</div>
+<div class="card">
+    <form class="search-bar" method="GET">
+        <input type="text" name="keyword" class="form-control" placeholder="搜索家庭名称..." value="{{ keyword }}">
+        <button class="btn btn-primary">🔍 搜索</button>
+        {% if keyword %}<a href="/admin/families" class="btn btn-outline">清除</a>{% endif %}
+    </form>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>头像</th><th>名称</th><th>邀请码</th><th>描述</th><th>成员数</th><th>创建者</th><th>创建时间</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for family in pagination.items %}
+            <tr>
+                <td><img src="{{ family.avatar or 'https://via.placeholder.com/40' }}" class="table-img"></td>
+                <td><strong>{{ family.name }}</strong></td>
+                <td><span class="badge badge-primary">{{ family.invite_code }}</span></td>
+                <td>{{ family.description[:30] if family.description else '-' }}{% if family.description and family.description|length > 30 %}...{% endif %}</td>
+                <td>{{ family.members|length }}</td>
+                <td>{{ family.creator.nickname if family.creator else '-' }}</td>
+                <td>{{ family.created_at.strftime('%Y-%m-%d') if family.created_at else '-' }}</td>
+                <td class="table-actions">
+                    <button class="btn btn-info btn-sm" onclick="editFamily({{ family.id }},'{{ family.name }}','{{ family.description or '' }}')">编辑</button>
+                    <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/families/delete/{{ family.id }}','{{ family.name }}')">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">上一页</a>{% endif %}
+        {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&keyword={{ keyword }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
+        {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div id="addModal" class="modal-overlay">
+    <div class="modal">
+        <h3>➕ 创建家庭</h3>
+        <form method="POST" action="/admin/families/add">
+            <div class="form-group"><label>家庭名称</label><input type="text" name="name" class="form-control" required></div>
+            <div class="form-group"><label>描述</label><textarea name="description" class="form-control"></textarea></div>
+            <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal('addModal')">取消</button><button type="submit" class="btn btn-primary">创建</button></div>
+        </form>
+    </div>
+</div>
+<div id="editModal" class="modal-overlay">
+    <div class="modal">
+        <h3>✏️ 编辑家庭</h3>
+        <form method="POST" id="editForm">
+            <div class="form-group"><label>家庭名称</label><input type="text" name="name" id="e_fname" class="form-control" required></div>
+            <div class="form-group"><label>描述</label><textarea name="description" id="e_fdesc" class="form-control"></textarea></div>
+            <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal('editModal')">取消</button><button type="submit" class="btn btn-primary">保存</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function editFamily(id,name,desc){
+    document.getElementById('editForm').action='/admin/families/edit/'+id;
+    document.getElementById('e_fname').value=name;
+    document.getElementById('e_fdesc').value=desc;
+    openModal('editModal');
+}
+</script>
+{% endblock %}

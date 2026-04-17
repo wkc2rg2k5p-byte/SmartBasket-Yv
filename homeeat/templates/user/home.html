@@ -1,0 +1,134 @@
+{% extends "user/base.html" %}
+{% block title %}首页{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>🏠 欢迎回来，{{ current_user.nickname or current_user.username }}</h2>
+    <span class="breadcrumb">首页</span>
+</div>
+
+<!-- 快捷统计 -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon blue">👨‍👩‍👧‍👦</div>
+        <div class="stat-info">
+            <h4>我的家庭</h4>
+            <div class="stat-number">{{ family.name if family else '未加入' }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green">👥</div>
+        <div class="stat-info">
+            <h4>家庭成员</h4>
+            <div class="stat-number">{{ members|length }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange">📝</div>
+        <div class="stat-info">
+            <h4>点菜记录</h4>
+            <div class="stat-number">{{ recent_records|length }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon purple">🍳</div>
+        <div class="stat-info">
+            <h4>菜谱数量</h4>
+            <div class="stat-number">{{ recipes|length }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- 家庭成员 -->
+{% if family %}
+<div class="card">
+    <div class="card-header">
+        <h3>👨‍👩‍👧‍👦 家庭成员 - {{ family.name }}</h3>
+        <span class="badge badge-primary">邀请码: {{ family.invite_code }}</span>
+    </div>
+    <div class="member-grid">
+        {% for member in members %}
+        <div class="member-card">
+            <img src="{{ member.avatar or 'https://via.placeholder.com/60' }}" alt="{{ member.nickname }}">
+            <h4>{{ member.nickname or member.username }}</h4>
+            <p class="text-muted" style="font-size:12px;">{{ member.gender }} {% if member.age %}· {{ member.age }}岁{% endif %}</p>
+            <span class="role-badge">{% if member.is_family_admin %}管理员{% else %}成员{% endif %}</span>
+            {% if member.taste_likes %}
+            <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">喜好: {{ member.taste_likes }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="icon">👨‍👩‍👧‍👦</div>
+        <h3>还没有加入家庭</h3>
+        <p>创建或加入一个家庭，开始协同饮食管理</p>
+        <a href="/user/family" class="btn btn-primary">前往家庭管理</a>
+    </div>
+</div>
+{% endif %}
+
+<!-- 推荐菜谱 -->
+<div class="card">
+    <div class="card-header">
+        <h3>🍳 推荐菜谱</h3>
+        <a href="/user/ordering" class="btn btn-primary btn-sm">去点菜</a>
+    </div>
+    <div class="recipe-grid">
+        {% for recipe in recipes %}
+        <div class="recipe-card">
+            <img src="{{ recipe.image or 'https://via.placeholder.com/240x160' }}" alt="{{ recipe.name }}">
+            <div class="recipe-info">
+                <h4>{{ recipe.name }}</h4>
+                <div class="recipe-meta">
+                    <span>{{ recipe.category }}</span>
+                    <span>{{ recipe.taste }}</span>
+                    <span>{{ recipe.difficulty }}</span>
+                    <span>{{ recipe.cook_time }}分钟</span>
+                </div>
+                <div class="recipe-nutrition">
+                    <span>🔥 {{ recipe.calories }}千卡</span>
+                    <span>🥩 蛋白{{ recipe.protein }}g</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 最近点菜记录 -->
+{% if recent_records %}
+<div class="card">
+    <div class="card-header">
+        <h3>📅 最近点菜记录</h3>
+        <a href="/user/history" class="btn btn-outline btn-sm">查看更多</a>
+    </div>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr><th>日期</th><th>餐次</th><th>菜品</th><th>总热量</th><th>状态</th></tr>
+            </thead>
+            <tbody>
+                {% for record in recent_records %}
+                <tr>
+                    <td>{{ record.date }}</td>
+                    <td>{{ record.meal_type | meal_type_cn }}</td>
+                    <td>
+                        {% set recipes_list = record.recipes_json | fromjson %}
+                        {% for r in recipes_list[:3] %}
+                        <span class="badge badge-info">{{ r.name }}</span>
+                        {% endfor %}
+                        {% if recipes_list|length > 3 %}...{% endif %}
+                    </td>
+                    <td>{{ record.total_calories }} 千卡</td>
+                    <td><span class="badge badge-{{ 'success' if record.status == 'active' else 'warning' }}">{{ '正常' if record.status == 'active' else '复用' }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

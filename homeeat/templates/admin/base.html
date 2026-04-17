@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}管理后台{% endblock %} - HomeEat</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="user-layout">
+    <aside class="user-sidebar admin-sidebar">
+        <div class="sidebar-header">
+            <h2>🍽️ Home<span>Eat</span></h2>
+            <p style="font-size:12px;opacity:0.7;margin-top:4px;">管理后台</p>
+            <div class="user-info">
+                <img src="{{ current_user.avatar or 'https://via.placeholder.com/40' }}" alt="头像" class="user-avatar">
+                <div>
+                    <div class="user-name">{{ current_user.nickname }}</div>
+                    <div class="user-role">系统管理员</div>
+                </div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/admin/dashboard" class="{% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
+                <span class="nav-icon">📊</span> <span>仪表盘</span>
+            </a>
+            <a href="/admin/users" class="{% if request.endpoint == 'admin_users' %}active{% endif %}">
+                <span class="nav-icon">👤</span> <span>用户管理</span>
+            </a>
+            <a href="/admin/families" class="{% if request.endpoint == 'admin_families' %}active{% endif %}">
+                <span class="nav-icon">👨‍👩‍👧‍👦</span> <span>家庭管理</span>
+            </a>
+            <a href="/admin/recipes" class="{% if request.endpoint == 'admin_recipes' %}active{% endif %}">
+                <span class="nav-icon">🍳</span> <span>菜谱管理</span>
+            </a>
+            <a href="/admin/ingredients" class="{% if request.endpoint == 'admin_ingredients' %}active{% endif %}">
+                <span class="nav-icon">🥕</span> <span>食材管理</span>
+            </a>
+            <a href="/admin/records" class="{% if request.endpoint == 'admin_records' %}active{% endif %}">
+                <span class="nav-icon">📝</span> <span>点菜记录</span>
+            </a>
+            <a href="/admin/reports" class="{% if request.endpoint == 'admin_reports' %}active{% endif %}">
+                <span class="nav-icon">📈</span> <span>健康周报</span>
+            </a>
+            <a href="/admin/chats" class="{% if request.endpoint == 'admin_chats' %}active{% endif %}">
+                <span class="nav-icon">💬</span> <span>聊天记录</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="/logout"><span class="nav-icon">🚪</span> 退出登录</a>
+        </div>
+    </aside>
+    <main class="user-main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+</div>
+<script src="/static/js/main.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+{% block title %}聊天记录{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>💬 聊天记录管理</h2>
+    <span class="breadcrumb">管理后台 / 聊天记录</span>
+</div>
+<div class="card">
+    <form class="search-bar" method="GET">
+        <input type="text" name="keyword" class="form-control" placeholder="搜索消息内容..." value="{{ keyword }}">
+        <button class="btn btn-primary">🔍 搜索</button>
+        {% if keyword %}<a href="/admin/chats" class="btn btn-outline">清除</a>{% endif %}
+    </form>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>头像</th><th>发送者</th><th>所属家庭</th><th>消息内容</th><th>消息类型</th><th>发送时间</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for msg in pagination.items %}
+            <tr>
+                <td><img src="{{ msg.user.avatar or 'https://via.placeholder.com/40' }}" class="table-img" style="border-radius:50%;"></td>
+                <td>{{ msg.user.nickname if msg.user else '-' }}</td>
+                <td>{{ msg.family.name if msg.family else '-' }}</td>
+                <td style="max-width:400px;white-space:normal;word-break:break-all;">{{ msg.message }}</td>
+                <td>
+                    {% if msg.msg_type == 'text' %}<span class="badge badge-primary">文本</span>
+                    {% elif msg.msg_type == 'recipe' %}<span class="badge badge-success">菜谱推荐</span>
+                    {% elif msg.msg_type == 'system' %}<span class="badge badge-info">系统</span>
+                    {% else %}<span class="badge badge-warning">{{ msg.msg_type }}</span>{% endif %}
+                </td>
+                <td>{{ msg.created_at.strftime('%Y-%m-%d %H:%M') if msg.created_at else '-' }}</td>
+                <td class="table-actions">
+                    <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/chats/delete/{{ msg.id }}','消息#{{ msg.id }}')">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">上一页</a>{% endif %}
+        {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&keyword={{ keyword }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
+        {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

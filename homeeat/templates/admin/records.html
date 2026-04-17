@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% block title %}点菜记录{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>📝 点菜记录管理</h2>
+    <span class="breadcrumb">管理后台 / 点菜记录</span>
+</div>
+<div class="card">
+    <form class="search-bar" method="GET">
+        <input type="text" name="keyword" class="form-control" placeholder="搜索菜品名称..." value="{{ keyword }}">
+        <button class="btn btn-primary">🔍 搜索</button>
+        {% if keyword %}<a href="/admin/records" class="btn btn-outline">清除</a>{% endif %}
+    </form>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>日期</th><th>家庭</th><th>点菜人</th><th>餐次</th><th>菜品</th><th>总热量</th><th>蛋白质</th><th>脂肪</th><th>碳水</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for record in pagination.items %}
+            <tr>
+                <td>{{ record.date }}</td>
+                <td>{{ record.family.name if record.family else '-' }}</td>
+                <td>{{ record.user.nickname if record.user else '-' }}</td>
+                <td>{{ record.meal_type | meal_type_cn }}</td>
+                <td>
+                    {% set recipes_list = record.recipes_json | fromjson %}
+                    {% for r in recipes_list %}
+                    <span class="badge badge-info" style="margin:2px;">
+                        {% if r.image %}<img src="{{ r.image }}" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;margin-right:2px;">{% endif %}
+                        {{ r.name }}
+                    </span>
+                    {% endfor %}
+                </td>
+                <td>{{ record.total_calories }}千卡</td>
+                <td>{{ record.total_protein }}g</td>
+                <td>{{ record.total_fat }}g</td>
+                <td>{{ record.total_carbs }}g</td>
+                <td><span class="badge badge-{{ 'success' if record.status == 'active' else 'warning' }}">{{ '正常' if record.status == 'active' else '复用' }}</span></td>
+                <td class="table-actions">
+                    <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/records/delete/{{ record.id }}','记录#{{ record.id }}')">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">上一页</a>{% endif %}
+        {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&keyword={{ keyword }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
+        {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

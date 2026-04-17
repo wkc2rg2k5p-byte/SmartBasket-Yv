@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HomeEat{% endblock %} - 家庭饮食管理</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="frontend-layout">
+    <!-- 顶部导航栏 -->
+    <header class="frontend-navbar">
+        <div class="navbar-inner">
+            <a href="/user/home" class="navbar-logo">
+                🍽️ Home<span>Eat</span>
+            </a>
+            <button class="navbar-toggle" onclick="document.querySelector('.navbar-nav').classList.toggle('show')">
+                ☰
+            </button>
+            <nav class="navbar-nav">
+                <a href="/user/home" class="{% if request.endpoint == 'user_home' %}active{% endif %}">
+                    <span>🏠</span> 首页
+                </a>
+                <a href="/user/family" class="{% if request.endpoint == 'user_family' %}active{% endif %}">
+                    <span>👨‍👩‍👧‍👦</span> 家庭管理
+                </a>
+                <a href="/user/profile" class="{% if request.endpoint == 'user_profile' %}active{% endif %}">
+                    <span>📋</span> 健康档案
+                </a>
+                <a href="/user/ordering" class="{% if request.endpoint == 'user_ordering' %}active{% endif %}">
+                    <span>🍳</span> 智能点菜
+                </a>
+                <a href="/user/shopping" class="{% if request.endpoint == 'user_shopping' %}active{% endif %}">
+                    <span>🛒</span> 采购清单
+                </a>
+                <a href="/user/history" class="{% if request.endpoint == 'user_history' %}active{% endif %}">
+                    <span>📅</span> 历史菜单
+                </a>
+                <a href="/user/report" class="{% if request.endpoint == 'user_report' %}active{% endif %}">
+                    <span>📊</span> 健康周报
+                </a>
+            </nav>
+            <div class="navbar-user">
+                <div class="navbar-user-btn" onclick="document.querySelector('.navbar-dropdown').classList.toggle('show')">
+                    <img src="{{ current_user.avatar or 'https://via.placeholder.com/32' }}" alt="头像" class="navbar-avatar">
+                    <span class="navbar-username">{{ current_user.nickname or current_user.username }}</span>
+                    <span class="navbar-arrow">▾</span>
+                </div>
+                <div class="navbar-dropdown">
+                    <div class="dropdown-header">
+                        <img src="{{ current_user.avatar or 'https://via.placeholder.com/48' }}" alt="头像">
+                        <div>
+                            <div class="dropdown-name">{{ current_user.nickname or current_user.username }}</div>
+                            <div class="dropdown-role">{% if current_user.is_family_admin %}家庭管理员{% else %}家庭成员{% endif %}</div>
+                        </div>
+                    </div>
+                    <a href="/user/profile">📋 个人档案</a>
+                    <a href="/user/family">👨‍👩‍👧‍👦 家庭管理</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="/logout" class="dropdown-logout">🚪 退出登录</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="frontend-main">
+        <div class="frontend-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="frontend-footer">
+        <div class="frontend-container">
+            <p>🍽️ HomeEat - 家庭饮食管理协同系统 · 让每一餐都健康美味</p>
+        </div>
+    </footer>
+</div>
+<script src="/static/js/main.js"></script>
+<script>
+// 点击页面其他位置关闭下拉菜单
+document.addEventListener('click', function(e) {
+    const dropdown = document.querySelector('.navbar-dropdown');
+    const userBtn = document.querySelector('.navbar-user-btn');
+    if (dropdown && !userBtn.contains(e.target)) {
+        dropdown.classList.remove('show');
+    }
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

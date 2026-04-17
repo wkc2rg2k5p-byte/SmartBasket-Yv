@@ -1,0 +1,108 @@
+{% extends "admin/base.html" %}
+{% block title %}用户管理{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>👤 用户管理</h2>
+    <button class="btn btn-primary" onclick="openModal('addModal')">➕ 添加用户</button>
+</div>
+
+<div class="card">
+    <form class="search-bar" method="GET">
+        <input type="text" name="keyword" class="form-control" placeholder="搜索用户名或昵称..." value="{{ keyword }}">
+        <button class="btn btn-primary">🔍 搜索</button>
+        {% if keyword %}<a href="/admin/users" class="btn btn-outline">清除</a>{% endif %}
+    </form>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>头像</th><th>用户名</th><th>昵称</th><th>性别</th><th>年龄</th><th>所属家庭</th><th>过敏</th><th>口味偏好</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for user in pagination.items %}
+            <tr>
+                <td><img src="{{ user.avatar or 'https://via.placeholder.com/40' }}" class="table-img"></td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.nickname }}</td>
+                <td>{{ user.gender or '-' }}</td>
+                <td>{{ user.age or '-' }}</td>
+                <td>{{ family_map.get(user.family_id, '未加入') if user.family_id else '未加入' }}</td>
+                <td>{% if user.allergies %}<span class="badge badge-danger">{{ user.allergies }}</span>{% else %}-{% endif %}</td>
+                <td>{{ user.taste_likes or '-' }}</td>
+                <td class="table-actions">
+                    <button class="btn btn-info btn-sm" onclick="editUser({{ user.id }}, '{{ user.nickname }}', '{{ user.gender }}', {{ user.age or 0 }}, {{ user.height or 0 }}, {{ user.weight or 0 }}, '{{ user.diseases }}', '{{ user.allergies }}', '{{ user.taste_likes }}', '{{ user.taste_dislikes }}', '{{ user.health_goal }}')">编辑</button>
+                    <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/users/delete/{{ user.id }}', '{{ user.nickname }}')">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">上一页</a>{% endif %}
+        {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&keyword={{ keyword }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
+        {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div id="addModal" class="modal-overlay">
+    <div class="modal">
+        <h3>➕ 添加用户</h3>
+        <form method="POST" action="/admin/users/add">
+            <div class="grid-2">
+                <div class="form-group"><label>用户名</label><input type="text" name="username" class="form-control" required></div>
+                <div class="form-group"><label>密码</label><input type="text" name="password" class="form-control" value="123456"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>昵称</label><input type="text" name="nickname" class="form-control"></div>
+                <div class="form-group"><label>性别</label><select name="gender" class="form-control"><option value="">-</option><option value="男">男</option><option value="女">女</option></select></div>
+            </div>
+            <div class="form-group"><label>年龄</label><input type="number" name="age" class="form-control" min="0"></div>
+            <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal('addModal')">取消</button><button type="submit" class="btn btn-primary">确定</button></div>
+        </form>
+    </div>
+</div>
+
+<div id="editModal" class="modal-overlay">
+    <div class="modal">
+        <h3>✏️ 编辑用户</h3>
+        <form method="POST" id="editForm">
+            <div class="grid-2">
+                <div class="form-group"><label>昵称</label><input type="text" name="nickname" id="e_nickname" class="form-control"></div>
+                <div class="form-group"><label>性别</label><select name="gender" id="e_gender" class="form-control"><option value="">-</option><option value="男">男</option><option value="女">女</option></select></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>年龄</label><input type="number" name="age" id="e_age" class="form-control"></div>
+                <div class="form-group"><label>身高(cm)</label><input type="number" name="height" id="e_height" class="form-control" step="0.1"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>体重(kg)</label><input type="number" name="weight" id="e_weight" class="form-control" step="0.1"></div>
+                <div class="form-group"><label>新密码(留空不修改)</label><input type="text" name="password" class="form-control" placeholder="留空不修改"></div>
+            </div>
+            <div class="form-group"><label>慢性疾病</label><input type="text" name="diseases" id="e_diseases" class="form-control"></div>
+            <div class="form-group"><label>过敏</label><input type="text" name="allergies" id="e_allergies" class="form-control"></div>
+            <div class="form-group"><label>口味偏好</label><input type="text" name="taste_likes" id="e_likes" class="form-control"></div>
+            <div class="form-group"><label>忌口</label><input type="text" name="taste_dislikes" id="e_dislikes" class="form-control"></div>
+            <div class="form-group"><label>健康目标</label><input type="text" name="health_goal" id="e_goal" class="form-control"></div>
+            <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal('editModal')">取消</button><button type="submit" class="btn btn-primary">保存</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function editUser(id, nickname, gender, age, height, weight, diseases, allergies, likes, dislikes, goal) {
+    document.getElementById('editForm').action = '/admin/users/edit/' + id;
+    document.getElementById('e_nickname').value = nickname;
+    document.getElementById('e_gender').value = gender;
+    document.getElementById('e_age').value = age;
+    document.getElementById('e_height').value = height;
+    document.getElementById('e_weight').value = weight;
+    document.getElementById('e_diseases').value = diseases;
+    document.getElementById('e_allergies').value = allergies;
+    document.getElementById('e_likes').value = likes;
+    document.getElementById('e_dislikes').value = dislikes;
+    document.getElementById('e_goal').value = goal;
+    openModal('editModal');
+}
+</script>
+{% endblock %}

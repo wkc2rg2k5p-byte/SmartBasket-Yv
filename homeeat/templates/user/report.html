@@ -1,0 +1,111 @@
+{% extends "user/base.html" %}
+{% block title %}健康周报{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>📊 健康周报</h2>
+    <div>
+        <button class="btn btn-success" onclick="generateReport()">📈 生成本周报告</button>
+    </div>
+</div>
+
+{% if reports %}
+{% for report in reports %}
+<div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+        <h3>📅 {{ report.week_start }} ~ {{ report.week_end }} 周报</h3>
+        <span class="badge badge-info">共 {{ report.total_meals }} 餐</span>
+    </div>
+
+    <!-- 营养摘要 -->
+    <div class="stats-grid" style="margin-bottom:16px;">
+        <div class="stat-card">
+            <div class="stat-icon orange">🔥</div>
+            <div class="stat-info"><h4>平均热量</h4><div class="stat-number">{{ report.avg_calories }}<small>千卡</small></div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red">🥩</div>
+            <div class="stat-info"><h4>平均蛋白质</h4><div class="stat-number">{{ report.avg_protein }}<small>g</small></div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">🧈</div>
+            <div class="stat-info"><h4>平均脂肪</h4><div class="stat-number">{{ report.avg_fat }}<small>g</small></div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon teal">🌾</div>
+            <div class="stat-info"><h4>平均碳水</h4><div class="stat-number">{{ report.avg_carbs }}<small>g</small></div></div>
+        </div>
+    </div>
+
+    <!-- 营养柱状图 -->
+    <div class="report-section">
+        <h4>📊 营养摄入分析</h4>
+        <div class="nutrition-bar">
+            <span class="label">蛋白质</span>
+            <div class="bar"><div class="bar-fill" style="width:{{ [report.avg_protein / 50 * 100, 100]|min }}%;background:linear-gradient(90deg,#E74C3C,#FF6B6B)"></div></div>
+            <span class="value">{{ report.avg_protein }}g</span>
+        </div>
+        <div class="nutrition-bar">
+            <span class="label">脂肪</span>
+            <div class="bar"><div class="bar-fill" style="width:{{ [report.avg_fat / 60 * 100, 100]|min }}%;background:linear-gradient(90deg,#9B59B6,#BB8FCE)"></div></div>
+            <span class="value">{{ report.avg_fat }}g</span>
+        </div>
+        <div class="nutrition-bar">
+            <span class="label">碳水</span>
+            <div class="bar"><div class="bar-fill" style="width:{{ [report.avg_carbs / 100 * 100, 100]|min }}%;background:linear-gradient(90deg,#1ABC9C,#48C9B0)"></div></div>
+            <span class="value">{{ report.avg_carbs }}g</span>
+        </div>
+    </div>
+
+    <!-- 热门菜品 -->
+    <div class="report-section">
+        <h4>🏆 本周热门菜品</h4>
+        {% set top_recipes = report.top_recipes | fromjson %}
+        {% for r in top_recipes %}
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="width:24px;height:24px;background:var(--primary);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">{{ loop.index }}</span>
+            <span style="flex:1;font-size:14px;">{{ r.name }}</span>
+            <span class="badge badge-primary">{{ r.count }} 次</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 营养分析 -->
+    <div class="report-section">
+        <h4>🔬 营养分析</h4>
+        <p style="font-size:14px;line-height:1.8;">{{ report.nutrition_analysis }}</p>
+    </div>
+
+    <!-- 饮食建议 -->
+    <div class="report-section" style="background:linear-gradient(135deg,#E8F8F5,#D5F5E3);border-color:#A3E4D7;">
+        <h4 style="color:#1ABC9C;">💡 饮食建议</h4>
+        <pre style="font-size:14px;line-height:1.8;white-space:pre-wrap;font-family:inherit;">{{ report.suggestions }}</pre>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="icon">📊</div>
+        <h3>暂无健康周报</h3>
+        <p>点击上方"生成本周报告"按钮生成您的第一份健康周报</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function generateReport() {
+    fetch('/api/report/generate', {method: 'POST'})
+    .then(r => r.json())
+    .then(data => {
+        if (data.code === 0) {
+            alert('周报生成成功！');
+            location.reload();
+        } else {
+            alert(data.msg);
+        }
+    });
+}
+</script>
+{% endblock %}

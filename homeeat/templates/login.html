@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeEat - 家庭饮食管理协同系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="login-page">
+    <div class="login-container">
+        <div class="login-logo">
+            <h1>🍽️ Home<span>Eat</span></h1>
+            <p>家庭饮食管理协同系统</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% if show_register %}
+        <!-- 注册表单 -->
+        <form method="POST" action="/register">
+            <div class="form-group">
+                <label>👤 用户名</label>
+                <input type="text" name="username" class="form-control" placeholder="请输入用户名" required>
+            </div>
+            <div class="form-group">
+                <label>🔑 密码</label>
+                <input type="password" name="password" class="form-control" placeholder="请输入密码" required>
+            </div>
+            <div class="form-group">
+                <label>📝 昵称</label>
+                <input type="text" name="nickname" class="form-control" placeholder="请输入昵称（选填）">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">注 册</button>
+        </form>
+        <div class="login-footer">
+            已有账号？ <a href="/login">立即登录</a>
+        </div>
+        {% else %}
+        <!-- 登录表单 -->
+        <form method="POST" action="/login">
+            <div class="form-group">
+                <label>👤 用户名</label>
+                <input type="text" name="username" class="form-control" placeholder="请输入用户名" required>
+            </div>
+            <div class="form-group">
+                <label>🔑 密码</label>
+                <input type="password" name="password" class="form-control" placeholder="请输入密码" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">登 录</button>
+        </form>
+        <div class="login-footer">
+            没有账号？ <a href="/register">立即注册</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+<script src="/static/js/main.js"></script>
+</body>
+</html>

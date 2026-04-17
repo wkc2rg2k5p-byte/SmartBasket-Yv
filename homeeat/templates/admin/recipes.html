@@ -1,0 +1,143 @@
+{% extends "admin/base.html" %}
+{% block title %}菜谱管理{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>🍳 菜谱管理</h2>
+    <button class="btn btn-primary" onclick="openModal('addModal')">➕ 添加菜谱</button>
+</div>
+<div class="card">
+    <form class="search-bar" method="GET">
+        <input type="text" name="keyword" class="form-control" placeholder="搜索菜谱名称..." value="{{ keyword }}">
+        <button class="btn btn-primary">🔍 搜索</button>
+        {% if keyword %}<a href="/admin/recipes" class="btn btn-outline">清除</a>{% endif %}
+    </form>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>图片</th><th>名称</th><th>分类</th><th>菜系</th><th>口味</th><th>难度</th><th>时间</th><th>热量</th><th>蛋白</th><th>脂肪</th><th>碳水</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for recipe in pagination.items %}
+            <tr>
+                <td>{% if recipe.image %}<img src="{{ recipe.image }}" class="table-img">{% else %}-{% endif %}</td>
+                <td><strong>{{ recipe.name }}</strong></td>
+                <td><span class="badge badge-info">{{ recipe.category }}</span></td>
+                <td>{{ recipe.cuisine }}</td>
+                <td>{{ recipe.taste }}</td>
+                <td>{{ recipe.difficulty }}</td>
+                <td>{{ recipe.cook_time }}分</td>
+                <td>{{ recipe.calories }}千卡</td>
+                <td>{{ recipe.protein }}g</td>
+                <td>{{ recipe.fat }}g</td>
+                <td>{{ recipe.carbs }}g</td>
+                <td class="table-actions">
+                    <button class="btn btn-info btn-sm" onclick="editRecipe({{ recipe.id }},'{{ recipe.name }}','{{ recipe.image }}','{{ recipe.category }}','{{ recipe.cuisine }}','{{ recipe.taste }}','{{ recipe.difficulty }}',{{ recipe.cook_time }},{{ recipe.calories }},{{ recipe.protein }},{{ recipe.fat }},{{ recipe.carbs }},{{ recipe.fiber }})">编辑</button>
+                    <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/recipes/delete/{{ recipe.id }}','{{ recipe.name }}')">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">上一页</a>{% endif %}
+        {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&keyword={{ keyword }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
+        {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div id="addModal" class="modal-overlay">
+    <div class="modal">
+        <h3>➕ 添加菜谱</h3>
+        <form method="POST" action="/admin/recipes/add" enctype="multipart/form-data">
+            <div class="grid-2">
+                <div class="form-group"><label>菜谱名称</label><input type="text" name="name" class="form-control" required></div>
+                <div class="form-group"><label>菜谱图片</label>
+                    <input type="hidden" name="image" id="addImage">
+                    <input type="file" id="addImageFile" class="form-control" accept="image/*" onchange="uploadFile('addImageFile',function(url){document.getElementById('addImage').value=url;})">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>分类</label><input type="text" name="category" class="form-control" placeholder="如：荤菜/素菜/汤类"></div>
+                <div class="form-group"><label>菜系</label><input type="text" name="cuisine" class="form-control" placeholder="如：川菜/粤菜/家常"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>口味</label><input type="text" name="taste" class="form-control" placeholder="如：麻辣/清淡/酸甜"></div>
+                <div class="form-group"><label>难度</label><select name="difficulty" class="form-control"><option>简单</option><option>中等</option><option>困难</option></select></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>烹饪时间(分钟)</label><input type="number" name="cook_time" class="form-control" value="30"></div>
+                <div class="form-group"><label>热量(千卡)</label><input type="number" name="calories" class="form-control" step="0.1"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>蛋白质(g)</label><input type="number" name="protein" class="form-control" step="0.1"></div>
+                <div class="form-group"><label>脂肪(g)</label><input type="number" name="fat" class="form-control" step="0.1"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>碳水(g)</label><input type="number" name="carbs" class="form-control" step="0.1"></div>
+                <div class="form-group"><label>纤维(g)</label><input type="number" name="fiber" class="form-control" step="0.1"></div>
+            </div>
+            <div class="form-group"><label>食材清单(JSON)</label><textarea name="ingredients_json" class="form-control" rows="3" placeholder='[{"name":"鸡肉","amount":"300g","unit":"g"}]'>[]</textarea></div>
+            <div class="form-group"><label>做法步骤</label><textarea name="steps" class="form-control" rows="3"></textarea></div>
+            <div class="form-group"><label>描述</label><textarea name="description" class="form-control" rows="2"></textarea></div>
+            <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal('addModal')">取消</button><button type="submit" class="btn btn-primary">添加</button></div>
+        </form>
+    </div>
+</div>
+
+<div id="editModal" class="modal-overlay">
+    <div class="modal">
+        <h3>✏️ 编辑菜谱</h3>
+        <form method="POST" id="editForm">
+            <div class="grid-2">
+                <div class="form-group"><label>菜谱名称</label><input type="text" name="name" id="e_name" class="form-control" required></div>
+                <div class="form-group"><label>菜谱图片</label>
+                    <input type="hidden" name="image" id="e_image">
+                    <input type="file" id="editImageFile" class="form-control" accept="image/*" onchange="uploadFile('editImageFile',function(url){document.getElementById('e_image').value=url;})">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>分类</label><input type="text" name="category" id="e_cat" class="form-control"></div>
+                <div class="form-group"><label>菜系</label><input type="text" name="cuisine" id="e_cuisine" class="form-control"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>口味</label><input type="text" name="taste" id="e_taste" class="form-control"></div>
+                <div class="form-group"><label>难度</label><select name="difficulty" id="e_diff" class="form-control"><option>简单</option><option>中等</option><option>困难</option></select></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>时间(分)</label><input type="number" name="cook_time" id="e_time" class="form-control"></div>
+                <div class="form-group"><label>热量</label><input type="number" name="calories" id="e_cal" class="form-control" step="0.1"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>蛋白</label><input type="number" name="protein" id="e_pro" class="form-control" step="0.1"></div>
+                <div class="form-group"><label>脂肪</label><input type="number" name="fat" id="e_fat" class="form-control" step="0.1"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>碳水</label><input type="number" name="carbs" id="e_carbs" class="form-control" step="0.1"></div>
+                <div class="form-group"><label>纤维</label><input type="number" name="fiber" id="e_fiber" class="form-control" step="0.1"></div>
+            </div>
+            <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal('editModal')">取消</button><button type="submit" class="btn btn-primary">保存</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function editRecipe(id,name,image,cat,cuisine,taste,diff,time,cal,pro,fat,carbs,fiber){
+    document.getElementById('editForm').action='/admin/recipes/edit/'+id;
+    document.getElementById('e_name').value=name;
+    document.getElementById('e_image').value=image;
+    document.getElementById('e_cat').value=cat;
+    document.getElementById('e_cuisine').value=cuisine;
+    document.getElementById('e_taste').value=taste;
+    document.getElementById('e_diff').value=diff;
+    document.getElementById('e_time').value=time;
+    document.getElementById('e_cal').value=cal;
+    document.getElementById('e_pro').value=pro;
+    document.getElementById('e_fat').value=fat;
+    document.getElementById('e_carbs').value=carbs;
+    document.getElementById('e_fiber').value=fiber;
+    openModal('editModal');
+}
+</script>
+{% endblock %}

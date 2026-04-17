@@ -1,0 +1,110 @@
+{% extends "user/base.html" %}
+{% block title %}健康档案{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>📋 个人健康档案</h2>
+    <span class="breadcrumb">首页 / 健康档案</span>
+</div>
+
+<form method="POST" action="/user/profile">
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header"><h3>👤 基本信息</h3></div>
+        <div class="form-group">
+            <label>头像</label>
+            <div class="d-flex gap-1 align-center">
+                <img src="{{ current_user.avatar or 'https://via.placeholder.com/60' }}" alt="头像" style="width:60px;height:60px;border-radius:50%;object-fit:cover;" id="avatarPreview">
+                <div style="flex:1;">
+                    <input type="hidden" name="avatar" id="avatarUrl" value="{{ current_user.avatar }}">
+                    <input type="file" id="avatarFile" class="form-control" accept="image/*"
+                        onchange="uploadFile('avatarFile', function(url){document.getElementById('avatarUrl').value=url;document.getElementById('avatarPreview').src=url;})">
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>昵称</label>
+            <input type="text" name="nickname" class="form-control" value="{{ current_user.nickname }}" required>
+        </div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label>性别</label>
+                <select name="gender" class="form-control">
+                    <option value="">请选择</option>
+                    <option value="男" {% if current_user.gender == '男' %}selected{% endif %}>男</option>
+                    <option value="女" {% if current_user.gender == '女' %}selected{% endif %}>女</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>年龄</label>
+                <input type="number" name="age" class="form-control" value="{{ current_user.age or '' }}" min="0" max="150">
+            </div>
+        </div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label>身高 (cm)</label>
+                <input type="number" name="height" class="form-control" value="{{ current_user.height or '' }}" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>体重 (kg)</label>
+                <input type="number" name="weight" class="form-control" value="{{ current_user.weight or '' }}" step="0.1">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3>🏥 健康状况</h3></div>
+        <div class="form-group">
+            <label>慢性疾病</label>
+            <input type="text" name="diseases" class="form-control" value="{{ current_user.diseases }}" placeholder="如：高血压、糖尿病（多个用逗号分隔）">
+        </div>
+        <div class="form-group">
+            <label>过敏史</label>
+            <input type="text" name="allergies" class="form-control" value="{{ current_user.allergies }}" placeholder="如：海鲜过敏、花生过敏">
+        </div>
+        <div class="form-group">
+            <label>特殊饮食需求</label>
+            <input type="text" name="special_diet" class="form-control" value="{{ current_user.special_diet }}" placeholder="如：低盐饮食、素食主义">
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header"><h3>😋 口味偏好</h3></div>
+        <div class="form-group">
+            <label>喜欢的口味</label>
+            <textarea name="taste_likes" class="form-control" placeholder="如：清淡、微辣、酸甜（多个用逗号分隔）">{{ current_user.taste_likes }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>忌口食材</label>
+            <textarea name="taste_dislikes" class="form-control" placeholder="如：苦瓜、芹菜、内脏（多个用逗号分隔）">{{ current_user.taste_dislikes }}</textarea>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3>🎯 健康目标</h3></div>
+        <div class="form-group">
+            <label>我的健康目标</label>
+            <textarea name="health_goal" class="form-control" rows="4" placeholder="如：均衡营养、控制体重、增肌减脂">{{ current_user.health_goal }}</textarea>
+        </div>
+        {% if current_user.height and current_user.weight %}
+        <div style="padding:12px;background:var(--primary-bg);border-radius:var(--radius-sm);">
+            <p style="font-size:13px;color:var(--primary-dark);">
+                📊 BMI指数: <strong>{{ "%.1f" | format(current_user.weight / ((current_user.height/100) ** 2)) }}</strong>
+                {% set bmi = current_user.weight / ((current_user.height/100) ** 2) %}
+                {% if bmi < 18.5 %} (偏瘦)
+                {% elif bmi < 24 %} (正常)
+                {% elif bmi < 28 %} (偏胖)
+                {% else %} (肥胖)
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="text-center mt-2">
+    <button type="submit" class="btn btn-primary btn-lg">💾 保存档案</button>
+</div>
+</form>
+{% endblock %}

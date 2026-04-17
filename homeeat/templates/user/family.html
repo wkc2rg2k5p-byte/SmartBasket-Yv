@@ -1,0 +1,89 @@
+{% extends "user/base.html" %}
+{% block title %}家庭管理{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>👨‍👩‍👧‍👦 家庭管理</h2>
+    <span class="breadcrumb">首页 / 家庭管理</span>
+</div>
+
+{% if family %}
+<!-- 家庭信息 -->
+<div class="card">
+    <div class="card-header">
+        <h3>🏠 {{ family.name }}</h3>
+        <div class="d-flex gap-1">
+            <span class="badge badge-primary" style="font-size:14px;">邀请码: {{ family.invite_code }}</span>
+            {% if current_user.is_family_admin %}
+            <button class="btn btn-danger btn-sm" onclick="if(confirm('确定离开家庭吗？'))location.href='/user/family/leave'">离开家庭</button>
+            {% endif %}
+        </div>
+    </div>
+    <p class="text-muted mb-2">{{ family.description or '暂无描述' }}</p>
+    <p class="text-muted" style="font-size:13px;">创建时间: {{ family.created_at.strftime('%Y-%m-%d') if family.created_at else 'N/A' }}</p>
+</div>
+
+<!-- 家庭成员列表 -->
+<div class="card">
+    <div class="card-header">
+        <h3>👥 家庭成员 ({{ members|length }}人)</h3>
+    </div>
+    <div class="member-grid">
+        {% for member in members %}
+        <div class="member-card">
+            <img src="{{ member.avatar or 'https://via.placeholder.com/60' }}" alt="{{ member.nickname }}">
+            <h4>{{ member.nickname or member.username }}</h4>
+            <p class="text-muted" style="font-size:12px;">{{ member.gender }} {% if member.age %}· {{ member.age }}岁{% endif %}</p>
+            <span class="role-badge">{% if member.is_family_admin %}👑 管理员{% else %}成员{% endif %}</span>
+            {% if member.allergies %}<p style="font-size:11px;color:var(--danger);margin-top:4px;">⚠️ {{ member.allergies }}</p>{% endif %}
+            {% if member.taste_likes %}<p style="font-size:11px;color:var(--text-muted);margin-top:4px;">❤️ {{ member.taste_likes }}</p>{% endif %}
+            {% if member.taste_dislikes %}<p style="font-size:11px;color:var(--text-muted);margin-top:2px;">🚫 {{ member.taste_dislikes }}</p>{% endif %}
+            {% if current_user.is_family_admin and member.id != current_user.id %}
+            <div class="mt-1">
+                <button class="btn btn-danger btn-sm" onclick="confirmDelete('/user/family/remove/{{ member.id }}', '{{ member.nickname }}')">移除</button>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<!-- 未加入家庭 -->
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header"><h3>🏠 创建家庭</h3></div>
+        <form method="POST" action="/user/family/create">
+            <div class="form-group">
+                <label>家庭名称</label>
+                <input type="text" name="name" class="form-control" placeholder="例：温馨之家" required>
+            </div>
+            <div class="form-group">
+                <label>家庭描述</label>
+                <textarea name="description" class="form-control" placeholder="简单介绍您的家庭"></textarea>
+            </div>
+            <div class="form-group">
+                <label>家庭头像URL（选填）</label>
+                <div class="d-flex gap-1">
+                    <input type="hidden" name="avatar" id="familyAvatar">
+                    <input type="file" id="familyAvatarFile" class="form-control" accept="image/*" onchange="uploadFile('familyAvatarFile', function(url){document.getElementById('familyAvatar').value=url;})">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">创建家庭</button>
+        </form>
+    </div>
+    <div class="card">
+        <div class="card-header"><h3>🔗 加入家庭</h3></div>
+        <form method="POST" action="/user/family/join">
+            <div class="form-group">
+                <label>邀请码</label>
+                <input type="text" name="invite_code" class="form-control" placeholder="输入邀请码加入家庭" required>
+            </div>
+            <p class="text-muted mb-2" style="font-size:13px;">请向家庭管理员获取邀请码</p>
+            <button type="submit" class="btn btn-success btn-block">加入家庭</button>
+        </form>
+        <div class="mt-3" style="padding-top:16px;border-top:1px solid var(--border);">
+            <p class="text-muted" style="font-size:13px;">💡 测试邀请码: <strong>HAPPY2024</strong> (幸福之家) 或 <strong>YUMMY2024</strong> (美味小窝)</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

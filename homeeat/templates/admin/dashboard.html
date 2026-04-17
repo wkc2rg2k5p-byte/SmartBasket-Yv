@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+{% block title %}仪表盘{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>📊 管理仪表盘</h2>
+    <span class="breadcrumb">管理后台</span>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon blue">👤</div><div class="stat-info"><h4>用户数量</h4><div class="stat-number">{{ stats.user_count }}</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">👨‍👩‍👧‍👦</div><div class="stat-info"><h4>家庭数量</h4><div class="stat-number">{{ stats.family_count }}</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">🍳</div><div class="stat-info"><h4>菜谱数量</h4><div class="stat-number">{{ stats.recipe_count }}</div></div></div>
+    <div class="stat-card"><div class="stat-icon purple">🥕</div><div class="stat-info"><h4>食材数量</h4><div class="stat-number">{{ stats.ingredient_count }}</div></div></div>
+    <div class="stat-card"><div class="stat-icon red">📝</div><div class="stat-info"><h4>点菜记录</h4><div class="stat-number">{{ stats.record_count }}</div></div></div>
+    <div class="stat-card"><div class="stat-icon teal">📈</div><div class="stat-info"><h4>健康周报</h4><div class="stat-number">{{ stats.report_count }}</div></div></div>
+    <div class="stat-card"><div class="stat-icon pink">💬</div><div class="stat-info"><h4>聊天消息</h4><div class="stat-number">{{ stats.chat_count }}</div></div></div>
+    <div class="stat-card"><div class="stat-icon cyan">🛒</div><div class="stat-info"><h4>采购清单</h4><div class="stat-number">{{ stats.shopping_count }}</div></div></div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header"><h3>👤 最新用户</h3><a href="/admin/users" class="btn btn-outline btn-sm">查看全部</a></div>
+        <table class="data-table">
+            <thead><tr><th>头像</th><th>昵称</th><th>用户名</th><th>性别</th><th>注册时间</th></tr></thead>
+            <tbody>
+            {% for user in recent_users %}
+            <tr>
+                <td><img src="{{ user.avatar or 'https://via.placeholder.com/40' }}" class="table-img"></td>
+                <td>{{ user.nickname }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.gender or '-' }}</td>
+                <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <div class="card-header"><h3>📝 最新点菜记录</h3><a href="/admin/records" class="btn btn-outline btn-sm">查看全部</a></div>
+        <table class="data-table">
+            <thead><tr><th>日期</th><th>家庭</th><th>用户</th><th>餐次</th><th>总热量</th></tr></thead>
+            <tbody>
+            {% for record in recent_records %}
+            <tr>
+                <td>{{ record.date }}</td>
+                <td>{{ record.family.name if record.family else '-' }}</td>
+                <td>{{ record.user.nickname if record.user else '-' }}</td>
+                <td>{{ record.meal_type | meal_type_cn }}</td>
+                <td>{{ record.total_calories }}千卡</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

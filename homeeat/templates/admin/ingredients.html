@@ -1,0 +1,122 @@
+{% extends "admin/base.html" %}
+{% block title %}食材管理{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>🥕 食材管理</h2>
+    <button class="btn btn-primary" onclick="openModal('addModal')">➕ 添加食材</button>
+</div>
+<div class="card">
+    <form class="search-bar" method="GET">
+        <input type="text" name="keyword" class="form-control" placeholder="搜索食材名称..." value="{{ keyword }}">
+        <button class="btn btn-primary">🔍 搜索</button>
+        {% if keyword %}<a href="/admin/ingredients" class="btn btn-outline">清除</a>{% endif %}
+    </form>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>图片</th><th>名称</th><th>分类</th><th>单位</th><th>热量</th><th>蛋白质</th><th>脂肪</th><th>碳水</th><th>纤维</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for ing in pagination.items %}
+            <tr>
+                <td>{% if ing.image %}<img src="{{ ing.image }}" class="table-img">{% else %}-{% endif %}</td>
+                <td><strong>{{ ing.name }}</strong></td>
+                <td><span class="badge badge-primary">{{ ing.category }}</span></td>
+                <td>{{ ing.unit }}</td>
+                <td>{{ ing.calories }}千卡</td>
+                <td>{{ ing.protein }}g</td>
+                <td>{{ ing.fat }}g</td>
+                <td>{{ ing.carbs }}g</td>
+                <td>{{ ing.fiber }}g</td>
+                <td class="table-actions">
+                    <button class="btn btn-info btn-sm" onclick="editIng({{ ing.id }},'{{ ing.name }}','{{ ing.category }}','{{ ing.unit }}','{{ ing.image }}',{{ ing.protein }},{{ ing.fat }},{{ ing.carbs }},{{ ing.calories }},{{ ing.fiber }})">编辑</button>
+                    <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/ingredients/delete/{{ ing.id }}','{{ ing.name }}')">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">上一页</a>{% endif %}
+        {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&keyword={{ keyword }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
+        {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div id="addModal" class="modal-overlay">
+    <div class="modal">
+        <h3>➕ 添加食材</h3>
+        <form method="POST" action="/admin/ingredients/add">
+            <div class="grid-2">
+                <div class="form-group"><label>名称</label><input type="text" name="name" class="form-control" required></div>
+                <div class="form-group"><label>分类</label><input type="text" name="category" class="form-control" placeholder="如：蔬菜/肉类/调味料"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>单位</label><input type="text" name="unit" class="form-control" value="g"></div>
+                <div class="form-group"><label>图片</label>
+                    <input type="hidden" name="image" id="addImage">
+                    <input type="file" id="addImgFile" class="form-control" accept="image/*" onchange="uploadFile('addImgFile',function(url){document.getElementById('addImage').value=url;})">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>热量(每100g千卡)</label><input type="number" name="calories" class="form-control" step="0.1"></div>
+                <div class="form-group"><label>蛋白质(g)</label><input type="number" name="protein" class="form-control" step="0.1"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>脂肪(g)</label><input type="number" name="fat" class="form-control" step="0.1"></div>
+                <div class="form-group"><label>碳水(g)</label><input type="number" name="carbs" class="form-control" step="0.1"></div>
+            </div>
+            <div class="form-group"><label>纤维(g)</label><input type="number" name="fiber" class="form-control" step="0.1"></div>
+            <div class="form-group"><label>描述</label><textarea name="description" class="form-control" rows="2"></textarea></div>
+            <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal('addModal')">取消</button><button type="submit" class="btn btn-primary">添加</button></div>
+        </form>
+    </div>
+</div>
+
+<div id="editModal" class="modal-overlay">
+    <div class="modal">
+        <h3>✏️ 编辑食材</h3>
+        <form method="POST" id="editForm">
+            <div class="grid-2">
+                <div class="form-group"><label>名称</label><input type="text" name="name" id="e_name" class="form-control" required></div>
+                <div class="form-group"><label>分类</label><input type="text" name="category" id="e_cat" class="form-control"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>单位</label><input type="text" name="unit" id="e_unit" class="form-control"></div>
+                <div class="form-group"><label>图片</label>
+                    <input type="hidden" name="image" id="e_image">
+                    <input type="file" id="editImgFile" class="form-control" accept="image/*" onchange="uploadFile('editImgFile',function(url){document.getElementById('e_image').value=url;})">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>热量</label><input type="number" name="calories" id="e_cal" class="form-control" step="0.1"></div>
+                <div class="form-group"><label>蛋白质</label><input type="number" name="protein" id="e_pro" class="form-control" step="0.1"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>脂肪</label><input type="number" name="fat" id="e_fat" class="form-control" step="0.1"></div>
+                <div class="form-group"><label>碳水</label><input type="number" name="carbs" id="e_carbs" class="form-control" step="0.1"></div>
+            </div>
+            <div class="form-group"><label>纤维</label><input type="number" name="fiber" id="e_fiber" class="form-control" step="0.1"></div>
+            <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal('editModal')">取消</button><button type="submit" class="btn btn-primary">保存</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function editIng(id,name,cat,unit,image,pro,fat,carbs,cal,fiber){
+    document.getElementById('editForm').action='/admin/ingredients/edit/'+id;
+    document.getElementById('e_name').value=name;
+    document.getElementById('e_cat').value=cat;
+    document.getElementById('e_unit').value=unit;
+    document.getElementById('e_image').value=image;
+    document.getElementById('e_pro').value=pro;
+    document.getElementById('e_fat').value=fat;
+    document.getElementById('e_carbs').value=carbs;
+    document.getElementById('e_cal').value=cal;
+    document.getElementById('e_fiber').value=fiber;
+    openModal('editModal');
+}
+</script>
+{% endblock %}

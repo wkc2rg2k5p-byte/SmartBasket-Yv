@@ -1,22 +1,17 @@
-"""
-HomeEat 配置文件
-"""
 import os
 
-# 数据库路径（自动在当前目录创建）
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_PATH = os.path.join(BASE_DIR, 'homeeat.db')
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-# Flask 配置
-SECRET_KEY = 'homeeat-secret-key-2026'
-HOST = '0.0.0.0'  # 允许局域网访问，方便演示多用户
-PORT = 5000
-DEBUG = True
 
-# 智谱AI 配置（已填写API Key）
-OPENAI_API_KEY = '7888abfec6244444ae3eeb42e44332a9.zMRYQmetj5RGdRjP'
-OPENAI_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4/'
-USE_MOCK_AI = False   # 使用真实AI
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'homeeat-secret-key-2024')
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'homeeat.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
-# 头像颜色
-AVATAR_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
+    # AI API Configuration (可配置真实API)
+    AI_API_KEY = os.environ.get('AI_API_KEY', 'ak_1Kh8jA3OR92y8ng5ii4hc4WF83D2d')
+    AI_API_URL = os.environ.get('AI_API_URL', 'https://api.longcat.chat/openai/v1/chat/completions')
+    AI_MODEL = os.environ.get('AI_MODEL', 'LongCat-Flash-Chat')

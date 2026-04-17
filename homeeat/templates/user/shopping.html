@@ -1,0 +1,61 @@
+{% extends "user/base.html" %}
+{% block title %}采购清单{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>🛒 采购清单</h2>
+    <span class="breadcrumb">首页 / 采购清单</span>
+</div>
+
+{% if shopping_lists %}
+{% for shopping in shopping_lists %}
+<div class="card">
+    <div class="card-header">
+        <h3>📋 {{ shopping.date }} 采购清单</h3>
+        <span class="badge badge-{{ 'success' if shopping.status == 'completed' else 'warning' }}">
+            {{ '已完成' if shopping.status == 'completed' else '采购中' }}
+        </span>
+    </div>
+    {% set items = shopping.items_json | fromjson %}
+    {% for item in items %}
+    <div class="shopping-item {% if item.checked %}checked{% endif %}" onclick="toggleItem({{ shopping.id }}, {{ loop.index0 }}, this)">
+        <input type="checkbox" {% if item.checked %}checked{% endif %} onclick="event.stopPropagation()">
+        <span class="item-name" style="flex:1;">{{ item.name }}</span>
+        <span class="text-muted">{{ item.amount }} {{ item.unit }}</span>
+    </div>
+    {% endfor %}
+    <div style="padding:12px 16px;background:var(--primary-bg);border-radius:0 0 var(--radius) var(--radius);font-size:13px;color:var(--text-muted);">
+        共 {{ items|length }} 项 · 已完成 {{ items|selectattr('checked')|list|length }} 项
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="icon">🛒</div>
+        <h3>暂无采购清单</h3>
+        <p>通过智能点菜生成菜谱后，系统会自动生成采购清单</p>
+        <a href="/user/ordering" class="btn btn-primary">去点菜</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleItem(shoppingId, itemIndex, el) {
+    fetch('/api/shopping/toggle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({shopping_id: shoppingId, item_index: itemIndex})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.code === 0) {
+            el.classList.toggle('checked');
+            const cb = el.querySelector('input[type="checkbox"]');
+            cb.checked = !cb.checked;
+        }
+    });
+}
+</script>
+{% endblock %}

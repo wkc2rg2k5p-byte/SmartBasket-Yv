@@ -1,0 +1,71 @@
+{% extends "admin/base.html" %}
+{% block title %}健康周报{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>📈 健康周报管理</h2>
+    <span class="breadcrumb">管理后台 / 健康周报</span>
+</div>
+<div class="card">
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>周期</th><th>家庭</th><th>总餐数</th><th>平均热量</th><th>平均蛋白</th><th>平均脂肪</th><th>平均碳水</th><th>热门菜品</th><th>创建时间</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for report in pagination.items %}
+            <tr>
+                <td>{{ report.week_start }} ~ {{ report.week_end }}</td>
+                <td>{{ report.family.name if report.family else '-' }}</td>
+                <td>{{ report.total_meals }}</td>
+                <td>{{ report.avg_calories }}千卡</td>
+                <td>{{ report.avg_protein }}g</td>
+                <td>{{ report.avg_fat }}g</td>
+                <td>{{ report.avg_carbs }}g</td>
+                <td>
+                    {% set top = report.top_recipes | fromjson %}
+                    {% for r in top[:3] %}
+                    <span class="badge badge-primary" style="margin:2px;">{{ r.name }}({{ r.count }}次)</span>
+                    {% endfor %}
+                </td>
+                <td>{{ report.created_at.strftime('%Y-%m-%d') if report.created_at else '-' }}</td>
+                <td class="table-actions">
+                    <button class="btn btn-info btn-sm" onclick="showDetail({{ report.id }})">详情</button>
+                    <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/reports/delete/{{ report.id }}','周报#{{ report.id }}')">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}">上一页</a>{% endif %}
+        {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
+        {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}">下一页</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- 详情模态框 -->
+{% for report in pagination.items %}
+<div id="detail_{{ report.id }}" class="modal-overlay">
+    <div class="modal">
+        <h3>📈 周报详情 ({{ report.week_start }} ~ {{ report.week_end }})</h3>
+        <div class="report-section" style="margin-bottom:12px;">
+            <h4>🔬 营养分析</h4>
+            <p style="font-size:14px;line-height:1.8;">{{ report.nutrition_analysis }}</p>
+        </div>
+        <div class="report-section" style="background:#E8F8F5;border-color:#A3E4D7;">
+            <h4 style="color:#1ABC9C;">💡 饮食建议</h4>
+            <pre style="font-size:14px;line-height:1.8;white-space:pre-wrap;font-family:inherit;">{{ report.suggestions }}</pre>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('detail_{{ report.id }}')">关闭</button>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+{% block extra_js %}
+<script>
+function showDetail(id) { openModal('detail_' + id); }
+</script>
+{% endblock %}

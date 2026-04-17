@@ -1,0 +1,203 @@
+{% extends "user/base.html" %}
+{% block title %}智能点菜{% endblock %}
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>🍳 智能点菜 - {{ family.name }}</h2>
+    <div>
+        <select id="mealType" class="form-control" style="display:inline-block;width:auto;margin-right:8px;">
+            <option value="breakfast">早餐</option>
+            <option value="lunch">午餐</option>
+            <option value="dinner" selected>晚餐</option>
+        </select>
+        <button class="btn btn-success" onclick="generateRecipe()" id="genBtn">🤖 AI生成菜谱</button>
+    </div>
+</div>
+
+<div class="chat-container" style="height: calc(100vh - 240px);">
+    <!-- 聊天主区域 -->
+    <div class="chat-main">
+        <div class="chat-messages" id="chatMessages">
+            {% for msg in messages %}
+            <div class="chat-msg {% if msg.user_id == current_user.id %}self{% endif %} {% if msg.msg_type == 'recipe' or msg.msg_type == 'system' %}system{% endif %}">
+                {% if msg.msg_type != 'system' and msg.msg_type != 'recipe' %}
+                <img src="{{ msg.user.avatar or 'https://via.placeholder.com/36' }}" alt="" class="avatar">
+                {% endif %}
+                <div class="msg-content">
+                    {% if msg.msg_type != 'system' and msg.msg_type != 'recipe' %}
+                    <div class="msg-header">
+                        <span class="nickname">{{ msg.user.nickname }}</span>
+                        <span>{{ msg.created_at.strftime('%H:%M') }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="msg-bubble">{{ msg.message }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="chat-input">
+            <input type="text" id="msgInput" placeholder="输入你想吃的菜，如：今晚想吃辣的..." onkeypress="if(event.keyCode==13)sendMsg()">
+            <button class="btn btn-primary" onclick="sendMsg()">发送</button>
+        </div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <div class="chat-sidebar">
+        <!-- 在线成员 -->
+        <div class="card" style="margin-bottom:0;">
+            <div class="card-header"><h3>👥 家庭成员</h3></div>
+            {% for member in members %}
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+                <img src="{{ member.avatar or 'https://via.placeholder.com/32' }}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+                <div>
+                    <div style="font-size:13px;font-weight:500;">{{ member.nickname }}</div>
+                    <div style="font-size:11px;color:var(--text-muted);">
+                        {% if member.allergies %}⚠️{{ member.allergies }}{% endif %}
+                        {% if member.taste_likes %}❤️{{ member.taste_likes }}{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 生成结果 -->
+        <div class="card" id="resultCard" style="display:none;margin-bottom:0;">
+            <div class="card-header"><h3>🍽️ 推荐菜谱</h3></div>
+            <div id="resultContent"></div>
+        </div>
+
+        <!-- 冲突提示 -->
+        <div class="card" id="conflictCard" style="display:none;margin-bottom:0;">
+            <div class="card-header"><h3>⚠️ 忌口提醒</h3></div>
+            <div id="conflictContent"></div>
+        </div>
+    </div>
+</div>
+
+<div id="recipeModal" class="modal-overlay">
+    <div class="modal">
+        <h3>🍽️ 生成的菜谱详情</h3>
+        <div id="recipeDetail"></div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('recipeModal')">关闭</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const familyId = {{ family.id }};
+const currentUserId = {{ current_user.id }};
+const socket = io();
+
+socket.emit('join', {family_id: familyId});
+
+socket.on('new_message', function(data) {
+    addMessage(data);
+});
+
+socket.on('status', function(data) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg system';
+    div.innerHTML = '<div class="msg-content"><div class="msg-bubble">' + data.msg + '</div></div>';
+    document.getElementById('chatMessages').appendChild(div);
+    scrollToBottom();
+});
+
+function sendMsg() {
+    const input = document.getElementById('msgInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+    socket.emit('send_message', {family_id: familyId, message: msg});
+    input.value = '';
+}
+
+function addMessage(data) {
+    const container = document.getElementById('chatMessages');
+    const isSelf = data.user_id === currentUserId;
+    const isSystem = data.msg_type === 'recipe' || data.msg_type === 'system';
+    let html = '<div class="chat-msg ' + (isSelf ? 'self' : '') + ' ' + (isSystem ? 'system' : '') + '">';
+    if (!isSystem) {
+        html += '<img src="' + (data.avatar || 'https://via.placeholder.com/36') + '" class="avatar">';
+    }
+    html += '<div class="msg-content">';
+    if (!isSystem) {
+        html += '<div class="msg-header"><span class="nickname">' + data.nickname + '</span><span>' + data.time + '</span></div>';
+    }
+    html += '<div class="msg-bubble">' + data.message + '</div></div></div>';
+    container.innerHTML += html;
+    scrollToBottom();
+}
+
+function scrollToBottom() {
+    const el = document.getElementById('chatMessages');
+    el.scrollTop = el.scrollHeight;
+}
+
+function generateRecipe() {
+    const btn = document.getElementById('genBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ 生成中...';
+    const mealType = document.getElementById('mealType').value;
+
+    fetch('/api/generate_recipe', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({meal_type: mealType})
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.textContent = '🤖 AI生成菜谱';
+        if (data.code === 0) {
+            showResult(data.data);
+        } else {
+            alert(data.msg);
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.textContent = '🤖 AI生成菜谱';
+        alert('生成失败: ' + err);
+    });
+}
+
+function showResult(data) {
+    const resultCard = document.getElementById('resultCard');
+    resultCard.style.display = 'block';
+    let html = '';
+    data.recipes.forEach(function(r) {
+        html += '<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="showRecipeDetail(' + JSON.stringify(r).replace(/"/g, '&quot;') + ')">';
+        html += '<img src="' + (r.image || '') + '" style="width:50px;height:50px;border-radius:8px;object-fit:cover;">';
+        html += '<div><div style="font-weight:500;font-size:13px;">' + r.name + '</div>';
+        html += '<div style="font-size:11px;color:var(--text-muted);">' + r.category + ' · ' + r.taste + ' · ' + r.calories + '千卡</div></div></div>';
+    });
+    document.getElementById('resultContent').innerHTML = html;
+
+    if (data.conflicts && data.conflicts.length > 0) {
+        document.getElementById('conflictCard').style.display = 'block';
+        document.getElementById('conflictContent').innerHTML = data.conflicts.map(c => '<p style="font-size:13px;color:var(--danger);padding:4px 0;">' + c + '</p>').join('');
+    }
+    scrollToBottom();
+}
+
+function showRecipeDetail(r) {
+    let html = '<div style="margin-bottom:16px;">';
+    html += '<img src="' + (r.image || '') + '" style="width:100%;height:200px;object-fit:cover;border-radius:8px;">';
+    html += '<h4 style="margin-top:12px;">' + r.name + '</h4>';
+    html += '<div class="d-flex gap-1 flex-wrap mt-1"><span class="badge badge-info">' + r.category + '</span><span class="badge badge-primary">' + r.taste + '</span><span class="badge badge-warning">' + r.difficulty + '</span><span class="badge badge-success">' + r.cook_time + '分钟</span></div>';
+    html += '<div class="mt-2" style="padding:12px;background:var(--primary-bg);border-radius:8px;">';
+    html += '<p style="font-size:13px;">🔥 热量: ' + r.calories + '千卡 | 蛋白: ' + r.protein + 'g | 脂肪: ' + r.fat + 'g | 碳水: ' + r.carbs + 'g</p></div>';
+    html += '<h4 style="margin-top:16px;">🥕 食材清单</h4><ul style="padding-left:20px;margin-top:8px;">';
+    r.ingredients.forEach(function(ing) { html += '<li style="font-size:13px;margin-bottom:4px;">' + ing.name + ' ' + ing.amount + '</li>'; });
+    html += '</ul><h4 style="margin-top:16px;">📝 做法步骤</h4><pre style="font-size:13px;margin-top:8px;white-space:pre-wrap;line-height:1.8;">' + r.steps + '</pre></div>';
+    document.getElementById('recipeDetail').innerHTML = html;
+    openModal('recipeModal');
+}
+
+scrollToBottom();
+</script>
+{% endblock %}

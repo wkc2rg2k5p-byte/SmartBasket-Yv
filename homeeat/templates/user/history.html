@@ -1,0 +1,74 @@
+{% extends "user/base.html" %}
+{% block title %}历史菜单{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>📅 历史菜单</h2>
+    <span class="breadcrumb">首页 / 历史菜单</span>
+</div>
+
+{% if records %}
+{% for record in records %}
+<div class="card">
+    <div class="card-header">
+        <h3>{{ record.date }} · {{ record.meal_type | meal_type_cn }}</h3>
+        <div class="d-flex gap-1 align-center">
+            <span class="badge badge-{{ 'success' if record.status == 'active' else 'info' }}">{{ '正常' if record.status == 'active' else '复用' }}</span>
+            <button class="btn btn-primary btn-sm" onclick="reuseMenu({{ record.id }})">📋 一键复用</button>
+        </div>
+    </div>
+    {% set recipes_list = record.recipes_json | fromjson %}
+    <div class="recipe-grid">
+        {% for r in recipes_list %}
+        <div class="recipe-card" style="cursor:default;">
+            {% if r.image %}
+            <img src="{{ r.image }}" alt="{{ r.name }}">
+            {% endif %}
+            <div class="recipe-info">
+                <h4>{{ r.name }}</h4>
+                <div class="recipe-meta">
+                    {% if r.category %}<span>{{ r.category }}</span>{% endif %}
+                    {% if r.taste %}<span>{{ r.taste }}</span>{% endif %}
+                </div>
+                <div class="recipe-nutrition">
+                    <span>🔥 {{ r.calories }}千卡</span>
+                    <span>🥩 {{ r.protein }}g</span>
+                    <span>🧈 {{ r.fat }}g</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div style="padding:12px 0;font-size:13px;color:var(--text-muted);border-top:1px solid var(--border);margin-top:12px;">
+        📊 总热量: {{ record.total_calories }}千卡 | 蛋白质: {{ record.total_protein }}g | 脂肪: {{ record.total_fat }}g | 碳水: {{ record.total_carbs }}g
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="icon">📅</div>
+        <h3>暂无历史记录</h3>
+        <p>开始点菜后，历史菜单将在此显示</p>
+        <a href="/user/ordering" class="btn btn-primary">去点菜</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function reuseMenu(recordId) {
+    if (!confirm('确定要将该菜单复用到今天吗？')) return;
+    fetch('/api/history/reuse/' + recordId, {method: 'POST'})
+    .then(r => r.json())
+    .then(data => {
+        if (data.code === 0) {
+            alert('菜单复用成功！已生成采购清单');
+            location.reload();
+        } else {
+            alert(data.msg);
+        }
+    });
+}
+</script>
+{% endblock %}

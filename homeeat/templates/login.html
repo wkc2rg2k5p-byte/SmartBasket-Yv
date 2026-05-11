@@ -5,62 +5,104 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HomeEat - 家庭饮食管理协同系统</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3C2415 0%,#5C3A20 40%,#8B5E3C 100%);font-family:var(--font-body);}
+        .login-container{width:420px;max-width:92vw;}
+        .login-brand{text-align:center;margin-bottom:36px;}
+        .login-brand .logo-icon{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,.12);backdrop-filter:blur(10px);font-size:32px;margin-bottom:16px;border:1px solid rgba(255,255,255,.15);}
+        .login-brand h1{font-size:28px;font-weight:700;color:white;margin-bottom:6px;letter-spacing:-.5px;}
+        .login-brand h1 span{color:var(--gold);}
+        .login-brand p{font-size:13px;color:rgba(255,255,255,.55);letter-spacing:.3px;}
+        .login-card{background:white;border-radius:16px;padding:36px 32px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+        .login-card .card-head{text-align:center;margin-bottom:28px;}
+        .login-card .card-head h2{font-size:22px;font-weight:700;color:var(--text-dark);margin-bottom:6px;}
+        .login-card .card-head p{font-size:13px;color:var(--text-muted);}
+        .login-card .form-group{margin-bottom:18px;}
+        .login-card .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text-dark);margin-bottom:7px;}
+        .login-card .form-control{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;background:var(--cream);transition:all .25s ease;outline:none;box-sizing:border-box;color:var(--text-dark);}
+        .login-card .form-control:focus{border-color:var(--coffee-500);background:white;box-shadow:0 0 0 3px rgba(139,94,60,.1);}
+        .login-card .form-control::placeholder{color:var(--text-light);}
+        .login-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;font-size:12px;}
+        .login-row label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--text-body);}
+        .login-row a{color:var(--coffee-500);font-weight:600;text-decoration:none;}
+        .login-row a:hover{text-decoration:underline;}
+        .login-btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all .3s ease;background:linear-gradient(135deg,var(--coffee-500),var(--coffee-600));color:white;letter-spacing:.5px;}
+        .login-btn:hover{background:linear-gradient(135deg,var(--coffee-600),var(--coffee-700));transform:translateY(-1px);box-shadow:0 6px 20px rgba(60,36,21,.25);}
+        .login-divider{text-align:center;margin:22px 0;position:relative;font-size:11px;color:var(--text-light);letter-spacing:1px;}
+        .login-divider::before,.login-divider::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:var(--border);}
+        .login-divider::before{left:0;}
+        .login-divider::after{right:0;}
+        .login-switch{text-align:center;font-size:13px;color:var(--text-muted);}
+        .login-switch a{color:var(--coffee-500);font-weight:700;text-decoration:none;margin-left:4px;}
+        .login-switch a:hover{text-decoration:underline;}
+        .login-footer{text-align:center;margin-top:28px;font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.3px;}
+    </style>
 </head>
 <body>
-<div class="login-page">
-    <div class="login-container">
-        <div class="login-logo">
-            <h1>🍽️ Home<span>Eat</span></h1>
-            <p>家庭饮食管理协同系统</p>
+<div class="login-container">
+    <div class="login-brand">
+        <div class="logo-icon">🍽️</div>
+        <h1>Home<span>Eat</span></h1>
+        <p>家庭饮食管理协同系统</p>
+    </div>
+
+    <div class="login-card">
+        <div class="card-head">
+            {% if show_register %}
+            <h2>创建您的账号</h2>
+            <p>注册后即可体验全部功能</p>
+            {% else %}
+            <h2>欢迎回来</h2>
+            <p>登录账号，管理您家庭的健康饮食</p>
+            {% endif %}
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
-        <div class="alert alert-{{ category }}">{{ message }}</div>
+        <div class="alert alert-{{ category }}" style="margin-bottom:16px;padding:10px 14px;border-radius:8px;font-size:13px;">{{ message }}</div>
         {% endfor %}
         {% endif %}
         {% endwith %}
 
-        {% if show_register %}
-        <!-- 注册表单 -->
-        <form method="POST" action="/register">
+        <form method="POST" action="{% if show_register %}/register{% else %}/login{% endif %}">
             <div class="form-group">
-                <label>👤 用户名</label>
-                <input type="text" name="username" class="form-control" placeholder="请输入用户名" required>
+                <label>用户名</label>
+                <input type="text" name="username" class="form-control" placeholder="{% if show_register %}请设置您的用户名{% else %}请输入用户名{% endif %}" required {% if not show_register %}autofocus{% endif %}>
             </div>
             <div class="form-group">
-                <label>🔑 密码</label>
-                <input type="password" name="password" class="form-control" placeholder="请输入密码" required>
+                <label>密码</label>
+                <input type="password" name="password" class="form-control" placeholder="{% if show_register %}建议使用 6 位以上字符组合{% else %}请输入密码{% endif %}" required>
             </div>
+            {% if show_register %}
             <div class="form-group">
-                <label>📝 昵称</label>
-                <input type="text" name="nickname" class="form-control" placeholder="请输入昵称（选填）">
+                <label>昵称</label>
+                <input type="text" name="nickname" class="form-control" placeholder="家人会看到的名字（选填）">
             </div>
-            <button type="submit" class="btn btn-primary btn-block">注 册</button>
+            <button type="submit" class="login-btn">✨ 创建账号</button>
+            {% else %}
+            <div class="login-row">
+                <label><input type="checkbox" style="accent-color:var(--coffee-500);"> 记住账号</label>
+                <a href="javascript:;" onclick="alert('请联系家庭管理员重置密码')">忘记密码？</a>
+            </div>
+            <button type="submit" class="login-btn">🔐 登录</button>
+            {% endif %}
         </form>
-        <div class="login-footer">
-            已有账号？ <a href="/login">立即登录</a>
+
+        <div class="login-divider">OR</div>
+
+        <div class="login-switch">
+            {% if show_register %}
+            已有账号？<a href="/login">返回登录</a>
+            {% else %}
+            还没有账号？<a href="/register">立即注册</a>
+            {% endif %}
         </div>
-        {% else %}
-        <!-- 登录表单 -->
-        <form method="POST" action="/login">
-            <div class="form-group">
-                <label>👤 用户名</label>
-                <input type="text" name="username" class="form-control" placeholder="请输入用户名" required>
-            </div>
-            <div class="form-group">
-                <label>🔑 密码</label>
-                <input type="password" name="password" class="form-control" placeholder="请输入密码" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">登 录</button>
-        </form>
-        <div class="login-footer">
-            没有账号？ <a href="/register">立即注册</a>
-        </div>
-        {% endif %}
+    </div>
+
+    <div class="login-footer">
+        © HomeEat · 家庭饮食管理协同系统
     </div>
 </div>
-<script src="/static/js/main.js"></script>
 </body>
 </html>

@@ -1,45 +1,105 @@
 {% extends "admin/base.html" %}
 {% block title %}用户管理{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h2>👤 用户管理</h2>
-    <button class="btn btn-primary" onclick="openModal('addModal')">➕ 添加用户</button>
+<div class="page-header-v4">
+    <div class="ph-left">
+        <div class="ph-crumb">
+            <a href="/admin/dashboard">管理控制台</a>
+            <span class="sep">/</span>
+            <span>用户运营</span>
+            <span class="sep">/</span>
+            <span>用户管理</span>
+        </div>
+        <h1>用户管理 <span class="ph-badge"><span class="dot"></span>{{ pagination.total }} 位用户</span></h1>
+        <p class="ph-desc">管理平台全部注册用户。支持搜索、编辑健康档案、重置密码、删除账号等操作。</p>
+    </div>
+    <div class="ph-actions">
+        <button class="btn btn-primary btn-lg" onclick="openModal('addModal')">➕ 添加用户</button>
+    </div>
 </div>
 
-<div class="card">
-    <form class="search-bar" method="GET">
-        <input type="text" name="keyword" class="form-control" placeholder="搜索用户名或昵称..." value="{{ keyword }}">
+<!-- 工具栏 -->
+<form class="toolbar" method="GET">
+    <div class="tb-search">
+        <input type="text" name="keyword" placeholder="搜索用户名或昵称..." value="{{ keyword }}">
+    </div>
+    <div class="tb-actions">
         <button class="btn btn-primary">🔍 搜索</button>
-        {% if keyword %}<a href="/admin/users" class="btn btn-outline">清除</a>{% endif %}
-    </form>
-    <div class="table-wrapper">
-        <table class="data-table">
-            <thead><tr><th>头像</th><th>用户名</th><th>昵称</th><th>性别</th><th>年龄</th><th>所属家庭</th><th>过敏</th><th>口味偏好</th><th>操作</th></tr></thead>
-            <tbody>
-            {% for user in pagination.items %}
-            <tr>
-                <td><img src="{{ user.avatar or 'https://via.placeholder.com/40' }}" class="table-img"></td>
-                <td>{{ user.username }}</td>
-                <td>{{ user.nickname }}</td>
-                <td>{{ user.gender or '-' }}</td>
-                <td>{{ user.age or '-' }}</td>
-                <td>{{ family_map.get(user.family_id, '未加入') if user.family_id else '未加入' }}</td>
-                <td>{% if user.allergies %}<span class="badge badge-danger">{{ user.allergies }}</span>{% else %}-{% endif %}</td>
-                <td>{{ user.taste_likes or '-' }}</td>
-                <td class="table-actions">
-                    <button class="btn btn-info btn-sm" onclick="editUser({{ user.id }}, '{{ user.nickname }}', '{{ user.gender }}', {{ user.age or 0 }}, {{ user.height or 0 }}, {{ user.weight or 0 }}, '{{ user.diseases }}', '{{ user.allergies }}', '{{ user.taste_likes }}', '{{ user.taste_dislikes }}', '{{ user.health_goal }}')">编辑</button>
-                    <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/users/delete/{{ user.id }}', '{{ user.nickname }}')">删除</button>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+        {% if keyword %}<a href="/admin/users" class="btn btn-outline">清除筛选</a>{% endif %}
+    </div>
+</form>
+
+<div class="panel">
+    <div class="panel-head">
+        <div class="panel-title">
+            <div class="panel-icon">👤</div>
+            <h3>用户列表</h3>
+            <span class="panel-sub">第 {{ pagination.page }} / {{ pagination.pages or 1 }} 页 · 共 {{ pagination.total }} 条</span>
+        </div>
+        <div class="panel-actions">
+            <span class="chip chip-primary">本页 {{ pagination.items|length }} 条</span>
+        </div>
+    </div>
+    <div class="panel-body no-pad">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>用户</th><th>昵称</th><th>性别/年龄</th><th>所属家庭</th><th>过敏信息</th><th>口味偏好</th><th>注册时间</th><th>操作</th></tr></thead>
+                <tbody>
+                {% for user in pagination.items %}
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <img src="{{ user.avatar or 'https://via.placeholder.com/36' }}" class="table-img" style="border-radius:50%;">
+                            <div>
+                                <div style="font-weight:600;color:var(--text-dark);">{{ user.username }}</div>
+                                <div style="font-size:11px;color:var(--text-light);">ID: {{ user.id }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><strong>{{ user.nickname }}</strong></td>
+                    <td>
+                        {% if user.gender == '男' %}<span class="chip chip-info"><span class="chip-dot"></span>男</span>
+                        {% elif user.gender == '女' %}<span class="chip chip-danger"><span class="chip-dot"></span>女</span>
+                        {% else %}<span class="chip chip-neutral">未填</span>{% endif %}
+                        {% if user.age %}<span style="font-size:12px;color:var(--text-muted);margin-left:4px;">{{ user.age }}岁</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if user.family_id %}
+                        <span class="chip chip-primary">🏠 {{ family_map.get(user.family_id, '—') }}</span>
+                        {% else %}
+                        <span class="chip chip-neutral">未加入</span>
+                        {% endif %}
+                    </td>
+                    <td>{% if user.allergies %}<span class="chip chip-danger"><span class="chip-dot"></span>{{ user.allergies }}</span>{% else %}<span style="color:var(--text-light);">—</span>{% endif %}</td>
+                    <td>{% if user.taste_likes %}<span style="font-size:12px;color:var(--text-body);">{{ user.taste_likes }}</span>{% else %}<span style="color:var(--text-light);">—</span>{% endif %}</td>
+                    <td style="font-size:12px;color:var(--text-muted);">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+                    <td class="table-actions">
+                        <button class="btn btn-info btn-sm" onclick="editUser({{ user.id }}, '{{ user.nickname }}', '{{ user.gender }}', {{ user.age or 0 }}, {{ user.height or 0 }}, {{ user.weight or 0 }}, '{{ user.diseases }}', '{{ user.allergies }}', '{{ user.taste_likes }}', '{{ user.taste_dislikes }}', '{{ user.health_goal }}')">✏️ 编辑</button>
+                        <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/users/delete/{{ user.id }}', '{{ user.nickname }}')">删除</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not pagination.items %}
+                <tr><td colspan="8">
+                    <div class="empty-state-v4" style="padding:40px;">
+                        <div class="es-icon">👤</div>
+                        <h3>没有找到用户</h3>
+                        <p>{% if keyword %}尝试调整搜索关键词{% else %}暂无注册用户{% endif %}</p>
+                    </div>
+                </td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
     </div>
     {% if pagination.pages > 1 %}
-    <div class="pagination">
-        {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">上一页</a>{% endif %}
-        {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&keyword={{ keyword }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
-        {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页</a>{% endif %}
+    <div class="panel-foot">
+        <span>共 {{ pagination.total }} 条记录，当前第 {{ pagination.page }} / {{ pagination.pages }} 页</span>
+        <div class="pagination" style="margin:0;">
+            {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">‹ 上一页</a>{% else %}<span class="disabled">‹ 上一页</span>{% endif %}
+            {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&keyword={{ keyword }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
+            {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页 ›</a>{% else %}<span class="disabled">下一页 ›</span>{% endif %}
+        </div>
     </div>
     {% endif %}
 </div>

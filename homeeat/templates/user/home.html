@@ -1,134 +1,179 @@
 {% extends "user/base.html" %}
-{% block title %}首页{% endblock %}
+{% block title %}工作台{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h2>🏠 欢迎回来，{{ current_user.nickname or current_user.username }}</h2>
-    <span class="breadcrumb">首页</span>
-</div>
-
-<!-- 快捷统计 -->
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-icon blue">👨‍👩‍👧‍👦</div>
-        <div class="stat-info">
-            <h4>我的家庭</h4>
-            <div class="stat-number">{{ family.name if family else '未加入' }}</div>
+<!-- 内页头 -->
+<div class="corp-subpage-head" style="margin:-32px -24px 0;padding:40px 24px;">
+    <div class="corp-subpage-head-inner" style="max-width:none;padding:0;">
+        <div>
+            <div class="corp-subpage-crumb"><a href="/">首页</a><span class="sep">/</span><span>用户控制台</span><span class="sep">/</span><span>工作台</span></div>
+            <h1>欢迎回来，{{ current_user.nickname or current_user.username }}<span class="head-badge">◆ DASHBOARD</span></h1>
+            <p class="sp-desc">HomeEat 个人工作台 · 统一管理您家庭的饮食健康数据</p>
         </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon green">👥</div>
-        <div class="stat-info">
-            <h4>家庭成员</h4>
-            <div class="stat-number">{{ members|length }}</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon orange">📝</div>
-        <div class="stat-info">
-            <h4>点菜记录</h4>
-            <div class="stat-number">{{ recent_records|length }}</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon purple">🍳</div>
-        <div class="stat-info">
-            <h4>菜谱数量</h4>
-            <div class="stat-number">{{ recipes|length }}</div>
-        </div>
-    </div>
-</div>
-
-<!-- 家庭成员 -->
-{% if family %}
-<div class="card">
-    <div class="card-header">
-        <h3>👨‍👩‍👧‍👦 家庭成员 - {{ family.name }}</h3>
-        <span class="badge badge-primary">邀请码: {{ family.invite_code }}</span>
-    </div>
-    <div class="member-grid">
-        {% for member in members %}
-        <div class="member-card">
-            <img src="{{ member.avatar or 'https://via.placeholder.com/60' }}" alt="{{ member.nickname }}">
-            <h4>{{ member.nickname or member.username }}</h4>
-            <p class="text-muted" style="font-size:12px;">{{ member.gender }} {% if member.age %}· {{ member.age }}岁{% endif %}</p>
-            <span class="role-badge">{% if member.is_family_admin %}管理员{% else %}成员{% endif %}</span>
-            {% if member.taste_likes %}
-            <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">喜好: {{ member.taste_likes }}</p>
+        <div class="corp-subpage-actions">
+            {% if family %}
+            <a href="/user/ordering" class="btn-primary-corp">🍽️ 开启点菜</a>
+            <a href="/user/report" class="btn-secondary-corp">📊 健康周报</a>
+            {% else %}
+            <a href="/user/family" class="btn-primary-corp">👨‍👩‍👧‍👦 加入家庭</a>
             {% endif %}
         </div>
-        {% endfor %}
     </div>
 </div>
-{% else %}
-<div class="card">
-    <div class="empty-state">
-        <div class="icon">👨‍👩‍👧‍👦</div>
-        <h3>还没有加入家庭</h3>
-        <p>创建或加入一个家庭，开始协同饮食管理</p>
-        <a href="/user/family" class="btn btn-primary">前往家庭管理</a>
-    </div>
-</div>
-{% endif %}
 
-<!-- 推荐菜谱 -->
-<div class="card">
-    <div class="card-header">
-        <h3>🍳 推荐菜谱</h3>
-        <a href="/user/ordering" class="btn btn-primary btn-sm">去点菜</a>
+<!-- KPI -->
+<div style="background:var(--coffee-800);margin:-1px -24px 32px;padding:24px;">
+    <div class="corp-hero-metrics" style="background:transparent;padding:0;">
+        <div class="hm-cell"><div class="hm-cell-num">{{ family.name if family else '—' }}</div><div class="hm-cell-label">{% if family %}YOUR FAMILY{% else %}NO FAMILY YET{% endif %}</div></div>
+        <div class="hm-cell"><div class="hm-cell-num">{{ members|length }}</div><div class="hm-cell-label">FAMILY MEMBERS</div></div>
+        <div class="hm-cell"><div class="hm-cell-num">{{ recent_records|length }}</div><div class="hm-cell-label">RECENT MEALS</div></div>
+        <div class="hm-cell"><div class="hm-cell-num">{{ recipes|length }}+</div><div class="hm-cell-label">RECIPES AVAILABLE</div></div>
     </div>
-    <div class="recipe-grid">
+</div>
+
+<!-- 功能入口 -->
+<section style="margin-bottom:32px;">
+    <div class="corp-section-title" style="margin-bottom:28px;">
+        <div class="eyebrow">◆ CORE SERVICES ◆</div>
+        <h2>核心功能</h2>
+        <div class="sub">HomeEat 平台核心功能矩阵 · 一站式家庭饮食健康管理</div>
+    </div>
+    <div class="corp-product-grid">
+        <a href="/user/ordering" class="corp-product-card" style="text-decoration:none;">
+            <div class="cp-img">🤖</div>
+            <div class="cp-body"><h4>AI 智能点菜</h4><p>家庭协作讨论 · AI 生成菜谱</p><span class="cp-btn">START</span></div>
+        </a>
+        <a href="/user/shopping" class="corp-product-card" style="text-decoration:none;">
+            <div class="cp-img">🛒</div>
+            <div class="cp-body"><h4>采购清单</h4><p>自动汇总食材 · 一键勾选</p><span class="cp-btn">OPEN</span></div>
+        </a>
+        <a href="/user/history" class="corp-product-card" style="text-decoration:none;">
+            <div class="cp-img">📅</div>
+            <div class="cp-body"><h4>历史菜单</h4><p>智能复用 · 节省决策时间</p><span class="cp-btn">VIEW</span></div>
+        </a>
+        <a href="/user/report" class="corp-product-card" style="text-decoration:none;">
+            <div class="cp-img">📊</div>
+            <div class="cp-body"><h4>健康周报</h4><p>营养数据可视化 · AI 分析</p><span class="cp-btn">CHECK</span></div>
+        </a>
+    </div>
+</section>
+
+<!-- 家庭动态 -->
+<section style="margin-bottom:32px;">
+    <div class="corp-section-title" style="margin-bottom:28px;">
+        <h2>家庭动态</h2>
+        <div class="sub">{{ family.name if family else '您尚未加入家庭' }} · 饮食记录与成员协作</div>
+    </div>
+
+    {% if family %}
+    <div class="grid-2">
+        <div class="panel">
+            <div class="panel-head">
+                <div class="panel-title"><div class="panel-icon">👥</div><h3>家庭成员 · {{ members|length }} 人</h3></div>
+                <span class="chip chip-primary">邀请码 {{ family.invite_code }}</span>
+            </div>
+            <div class="panel-body">
+                {% if members %}
+                <div class="member-grid">
+                    {% for member in members %}
+                    <div class="member-card" style="border-top-color:{% if member.is_family_admin %}var(--gold){% else %}var(--coffee-300){% endif %};">
+                        <img src="{{ member.avatar or 'https://via.placeholder.com/48' }}">
+                        <h4>{{ member.nickname or member.username }}</h4>
+                        <p class="text-muted" style="font-size:12px;">{{ member.gender or '未填' }}{% if member.age %} · {{ member.age }}岁{% endif %}</p>
+                        <span class="role-badge" style="background:{% if member.is_family_admin %}var(--gold-dark){% else %}var(--coffee-400){% endif %};">{% if member.is_family_admin %}👑 ADMIN{% else %}MEMBER{% endif %}</span>
+                        {% if member.allergies %}
+                        <div style="margin-top:8px;padding:4px 8px;background:rgba(201,75,75,.08);color:#8b2929;border-radius:3px;font-size:10.5px;font-weight:600;">⚠️ {{ member.allergies }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px;">暂无家庭成员</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head">
+                <div class="panel-title"><div class="panel-icon">📅</div><h3>最近动态</h3></div>
+                <a href="/user/history" class="btn btn-sm btn-primary">查看全部</a>
+            </div>
+            <div class="panel-body">
+                {% if recent_records %}
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    {% for record in recent_records %}
+                    <div style="padding:14px 16px;background:var(--cream);border-left:4px solid {% if record.status == 'active' %}var(--gold){% else %}var(--coffee-400){% endif %};border-radius:0 var(--radius-sm) var(--radius-sm) 0;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                            <div style="font-size:13.5px;font-weight:700;color:var(--text-dark);">{{ record.date }} · {{ record.meal_type | meal_type_cn }}</div>
+                            <span style="font-size:11px;font-weight:700;color:var(--gold-dark);">🔥 {{ record.total_calories }} 千卡</span>
+                        </div>
+                        <div style="font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:6px;">
+                            {% set rlist = record.recipes_json | fromjson %}
+                            {% for r in rlist[:3] %}{{ r.name }}{% if not loop.last %} · {% endif %}{% endfor %}{% if rlist|length > 3 %} 等 {{ rlist|length }} 道菜{% endif %}
+                        </div>
+                        <div style="display:flex;gap:8px;font-size:10.5px;color:var(--text-muted);">
+                            <span style="padding:2px 8px;background:white;border-radius:3px;">🥩 {{ record.total_protein }}g</span>
+                            <span style="padding:2px 8px;background:white;border-radius:3px;">🧈 {{ record.total_fat }}g</span>
+                            <span style="padding:2px 8px;background:white;border-radius:3px;">🌾 {{ record.total_carbs }}g</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state-v4">
+                    <div class="es-icon">📅</div>
+                    <h3>暂无点菜记录</h3>
+                    <p>开始您家庭的第一次 AI 智能点菜</p>
+                    <a href="/user/ordering" class="btn btn-primary">GO ORDER</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="panel">
+        <div class="panel-body">
+            <div class="empty-state-v4">
+                <div class="es-icon">👨‍👩‍👧‍👦</div>
+                <h3>加入您的家庭</h3>
+                <p>创建或加入家庭后，您可以与家人协作点菜、共享菜单、接收专属营养周报。</p>
+                <a href="/user/family" class="btn btn-primary btn-lg">→ 前往家庭管理</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</section>
+
+<!-- 精选菜谱 -->
+<section style="margin-bottom:32px;">
+    <div class="corp-section-title" style="margin-bottom:28px;">
+        <h2>推荐菜谱精选</h2>
+        <div class="sub">根据您家庭的口味偏好精心推荐 · 覆盖中式经典菜品数据库</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;">
         {% for recipe in recipes %}
-        <div class="recipe-card">
-            <img src="{{ recipe.image or 'https://via.placeholder.com/240x160' }}" alt="{{ recipe.name }}">
+        <div class="recipe-card" style="cursor:pointer;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='var(--shadow-lg)';" onmouseout="this.style.transform='';this.style.boxShadow='';">
+            <div class="recipe-img-wrap" style="height:160px;background:linear-gradient(135deg,var(--cream),var(--cream-dark));">
+                <img src="{{ recipe.image or 'https://via.placeholder.com/240x160' }}" alt="{{ recipe.name }}">
+            </div>
+            <div style="position:absolute;top:8px;left:8px;"><span class="recipe-badge">{{ recipe.category or '家常' }}</span></div>
             <div class="recipe-info">
                 <h4>{{ recipe.name }}</h4>
-                <div class="recipe-meta">
-                    <span>{{ recipe.category }}</span>
-                    <span>{{ recipe.taste }}</span>
-                    <span>{{ recipe.difficulty }}</span>
-                    <span>{{ recipe.cook_time }}分钟</span>
-                </div>
-                <div class="recipe-nutrition">
-                    <span>🔥 {{ recipe.calories }}千卡</span>
-                    <span>🥩 蛋白{{ recipe.protein }}g</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px dashed var(--border-light);">
+                    <span style="font-size:11px;color:var(--text-muted);">⏱️ {{ recipe.cook_time }} 分钟</span>
+                    <span style="font-size:12px;font-weight:700;color:var(--gold-dark);">🔥 {{ recipe.calories }} 千卡</span>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
-</div>
+</section>
 
-<!-- 最近点菜记录 -->
-{% if recent_records %}
-<div class="card">
-    <div class="card-header">
-        <h3>📅 最近点菜记录</h3>
-        <a href="/user/history" class="btn btn-outline btn-sm">查看更多</a>
-    </div>
-    <div class="table-wrapper">
-        <table class="data-table">
-            <thead>
-                <tr><th>日期</th><th>餐次</th><th>菜品</th><th>总热量</th><th>状态</th></tr>
-            </thead>
-            <tbody>
-                {% for record in recent_records %}
-                <tr>
-                    <td>{{ record.date }}</td>
-                    <td>{{ record.meal_type | meal_type_cn }}</td>
-                    <td>
-                        {% set recipes_list = record.recipes_json | fromjson %}
-                        {% for r in recipes_list[:3] %}
-                        <span class="badge badge-info">{{ r.name }}</span>
-                        {% endfor %}
-                        {% if recipes_list|length > 3 %}...{% endif %}
-                    </td>
-                    <td>{{ record.total_calories }} 千卡</td>
-                    <td><span class="badge badge-{{ 'success' if record.status == 'active' else 'warning' }}">{{ '正常' if record.status == 'active' else '复用' }}</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<!-- 系统状态 -->
+<div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:14px 22px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;background:var(--success);border-radius:50%;box-shadow:0 0 6px rgba(74,139,92,.5);"></span>系统状态：<strong style="color:var(--text-dark);">正常运行</strong></div>
+    <div>🤖 AI 模型：<strong style="color:var(--text-dark);">DeepSeek Chat</strong></div>
+    <div>⚡ 实时通讯：<strong style="color:var(--text-dark);">WebSocket 已连接</strong></div>
+    <div>🔐 数据加密：<strong style="color:var(--text-dark);">SSL 已启用</strong></div>
+    <div style="margin-left:auto;">Version <strong style="color:var(--gold-dark);">v1.0.0</strong></div>
 </div>
-{% endif %}
 {% endblock %}

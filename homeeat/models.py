@@ -104,18 +104,34 @@ class RecipeRecord(db.Model):
     user = db.relationship('User', backref=db.backref('records', lazy=True))
 
 
+class ChatSession(db.Model):
+    """聊天会话表 - 每次点菜为一个会话"""
+    __tablename__ = 'chat_session'
+    id = db.Column(db.Integer, primary_key=True)
+    family_id = db.Column(db.Integer, db.ForeignKey('family.id'), nullable=False)
+    started_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='active')  # active / completed
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    ended_at = db.Column(db.DateTime, nullable=True)
+
+    family = db.relationship('Family', backref=db.backref('sessions', lazy=True))
+    starter = db.relationship('User', foreign_keys=[started_by])
+
+
 class ChatMessage(db.Model):
     """聊天消息表"""
     __tablename__ = 'chat_message'
     id = db.Column(db.Integer, primary_key=True)
     family_id = db.Column(db.Integer, db.ForeignKey('family.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=True)
     message = db.Column(db.Text, nullable=False)
     msg_type = db.Column(db.String(20), default='text')  # text / system / recipe
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     family = db.relationship('Family', backref=db.backref('messages', lazy=True))
     user = db.relationship('User', backref=db.backref('messages', lazy=True))
+    session = db.relationship('ChatSession', backref=db.backref('messages', lazy=True))
 
 
 class ShoppingList(db.Model):

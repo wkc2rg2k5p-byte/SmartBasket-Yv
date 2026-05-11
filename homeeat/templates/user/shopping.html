@@ -1,61 +1,112 @@
 {% extends "user/base.html" %}
 {% block title %}采购清单{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h2>🛒 采购清单</h2>
-    <span class="breadcrumb">首页 / 采购清单</span>
+<div class="page-header-v4">
+    <div class="ph-left">
+        <div class="ph-crumb"><a href="/user/home">工作台</a><span class="sep">/</span><span>采购清单</span></div>
+        <h1>智能采购清单 <span class="ph-badge"><span class="dot"></span>自动汇总</span></h1>
+        <p class="ph-desc">基于 AI 生成的菜谱，系统自动汇总所需食材并去重，让您的家庭采购更高效、更精准。</p>
+    </div>
+    <div class="ph-actions"><a href="/user/ordering" class="btn btn-primary">🍳 继续点菜</a></div>
 </div>
 
 {% if shopping_lists %}
+{% set total_items = namespace(n=0) %}
+{% set checked_items = namespace(n=0) %}
+{% set completed_lists = namespace(n=0) %}
+{% for sl in shopping_lists %}
+    {% set items = sl.items_json | fromjson %}
+    {% set total_items.n = total_items.n + items|length %}
+    {% set checked_items.n = checked_items.n + (items|selectattr('checked')|list|length) %}
+    {% if sl.status == 'completed' %}{% set completed_lists.n = completed_lists.n + 1 %}{% endif %}
+{% endfor %}
+
+<div class="kpi-grid">
+    <div class="kpi-card accent-brand"><div class="kpi-head"><span class="kpi-label">清单总数</span><div class="kpi-icon-box">📋</div></div><div class="kpi-value">{{ shopping_lists|length }}</div><div class="kpi-foot"><span class="kpi-hint">累计生成清单</span></div></div>
+    <div class="kpi-card accent-olive"><div class="kpi-head"><span class="kpi-label">已完成清单</span><div class="kpi-icon-box">✅</div></div><div class="kpi-value">{{ completed_lists.n }}</div><div class="kpi-foot"><span class="kpi-hint">全部采购完成</span></div></div>
+    <div class="kpi-card accent-amber"><div class="kpi-head"><span class="kpi-label">食材项目</span><div class="kpi-icon-box">🥕</div></div><div class="kpi-value">{{ total_items.n }}</div><div class="kpi-foot"><span class="kpi-hint">累计食材数量</span></div></div>
+    <div class="kpi-card accent-teal"><div class="kpi-head"><span class="kpi-label">已勾选</span><div class="kpi-icon-box">🛒</div></div><div class="kpi-value">{{ checked_items.n }}</div><div class="kpi-foot"><span class="kpi-hint">已确认购买</span></div></div>
+</div>
+
 {% for shopping in shopping_lists %}
-<div class="card">
-    <div class="card-header">
-        <h3>📋 {{ shopping.date }} 采购清单</h3>
-        <span class="badge badge-{{ 'success' if shopping.status == 'completed' else 'warning' }}">
-            {{ '已完成' if shopping.status == 'completed' else '采购中' }}
-        </span>
+{% set items = shopping.items_json | fromjson %}
+{% set checked_count = items|selectattr('checked')|list|length %}
+{% set pct = (checked_count / items|length * 100)|int if items|length > 0 else 0 %}
+<div class="panel" id="shopping-panel-{{ shopping.id }}">
+    <div class="panel-head">
+        <div class="panel-title"><div class="panel-icon">📋</div><h3>{{ shopping.date }} 采购清单</h3><span class="panel-sub">{{ items|length }} 项食材 · 已勾选 {{ checked_count }}</span></div>
+        <div class="panel-actions">
+            {% if shopping.status == 'completed' %}<span class="chip chip-success"><span class="chip-dot"></span>已完成</span>
+            {% else %}<span class="chip chip-warning"><span class="chip-dot"></span>采购中 · {{ pct }}%</span>{% endif %}
+        </div>
     </div>
-    {% set items = shopping.items_json | fromjson %}
-    {% for item in items %}
-    <div class="shopping-item {% if item.checked %}checked{% endif %}" onclick="toggleItem({{ shopping.id }}, {{ loop.index0 }}, this)">
-        <input type="checkbox" {% if item.checked %}checked{% endif %} onclick="event.stopPropagation()">
-        <span class="item-name" style="flex:1;">{{ item.name }}</span>
-        <span class="text-muted">{{ item.amount }} {{ item.unit }}</span>
+    <div class="panel-body no-pad">
+        {% for item in items %}
+        <div class="shopping-item {% if item.checked %}checked{% endif %}" onclick="toggleItem({{ shopping.id }}, {{ loop.index0 }}, this)">
+            <input type="checkbox" {% if item.checked %}checked{% endif %} onclick="event.stopPropagation()">
+            <span class="item-name" style="flex:1;font-weight:500;">{{ item.name }}</span>
+            <span class="chip chip-neutral">{{ item.amount }} {{ item.unit }}</span>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-    <div style="padding:12px 16px;background:var(--primary-bg);border-radius:0 0 var(--radius) var(--radius);font-size:13px;color:var(--text-muted);">
-        共 {{ items|length }} 项 · 已完成 {{ items|selectattr('checked')|list|length }} 项
+    <div class="shopping-progress">
+        <span>共 <strong style="color:var(--text-dark);">{{ items|length }}</strong> 项食材</span>
+        <div class="shopping-progress-bar"><div class="shopping-progress-fill" style="width:{{ pct }}%"></div></div>
+        <span class="shopping-progress-text">{{ pct }}%</span>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--border-light);display:flex;gap:10px;justify-content:flex-end;">
+        {% if shopping.status != 'completed' %}
+        <button class="btn btn-success" style="padding:8px 20px;font-size:13px;" onclick="completeShopping({{ shopping.id }})">✅ 采购完毕</button>
+        {% else %}
+        <button class="btn btn-outline" style="padding:8px 20px;font-size:13px;" onclick="location.href='/user/history'">📋 查看历史菜单</button>
+        {% endif %}
+        <button class="btn btn-outline" style="padding:8px 20px;font-size:13px;color:var(--danger);border-color:var(--danger);" onclick="deleteShopping({{ shopping.id }})">🗑️ 删除</button>
     </div>
 </div>
 {% endfor %}
 {% else %}
-<div class="card">
-    <div class="empty-state">
-        <div class="icon">🛒</div>
-        <h3>暂无采购清单</h3>
-        <p>通过智能点菜生成菜谱后，系统会自动生成采购清单</p>
-        <a href="/user/ordering" class="btn btn-primary">去点菜</a>
-    </div>
-</div>
+<div class="panel"><div class="panel-body"><div class="empty-state-v4"><div class="es-icon">🛒</div><h3>还没有采购清单</h3><p>开启智能点菜生成菜谱后，系统会自动汇总采购清单</p><a href="/user/ordering" class="btn btn-primary">🍳 去点菜生成清单</a></div></div></div>
 {% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
 function toggleItem(shoppingId, itemIndex, el) {
-    fetch('/api/shopping/toggle', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({shopping_id: shoppingId, item_index: itemIndex})
-    })
-    .then(r => r.json())
-    .then(data => {
+    fetch('/api/shopping/toggle', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({shopping_id: shoppingId, item_index: itemIndex}) })
+    .then(r => r.json()).then(data => {
         if (data.code === 0) {
             el.classList.toggle('checked');
-            const cb = el.querySelector('input[type="checkbox"]');
-            cb.checked = !cb.checked;
-        }
-    });
+            const cb = el.querySelector('input[type="checkbox"]'); cb.checked = !cb.checked;
+            const panel = el.closest('.panel');
+            const items = panel.querySelectorAll('.shopping-item');
+            const checked = panel.querySelectorAll('.shopping-item.checked');
+            const pct = items.length ? Math.round(checked.length / items.length * 100) : 0;
+            panel.querySelector('.shopping-progress-fill').style.width = pct + '%';
+            panel.querySelector('.shopping-progress-text').textContent = pct + '%';
+        } else { showToast(data.msg || '操作失败', 'error'); }
+    }).catch(() => showToast('请求失败', 'error'));
+}
+
+function completeShopping(shoppingId) {
+    if (!confirm('确认标记此清单为采购完毕吗？')) return;
+    fetch('/api/shopping/complete/' + shoppingId, { method: 'POST', headers: {'Content-Type': 'application/json'} })
+    .then(r => r.json()).then(data => {
+        if (data.code === 0) {
+            alert('采购完毕！可在历史菜单中查看记录。');
+            location.reload();
+        } else { alert(data.msg || '操作失败'); }
+    }).catch(() => alert('请求失败'));
+}
+
+function deleteShopping(shoppingId) {
+    if (!confirm('确定要删除此采购清单吗？此操作不可撤销。')) return;
+    fetch('/api/shopping/delete/' + shoppingId, { method: 'POST', headers: {'Content-Type': 'application/json'} })
+    .then(r => r.json()).then(data => {
+        if (data.code === 0) {
+            const panel = document.getElementById('shopping-panel-' + shoppingId);
+            if (panel) { panel.style.transition = 'all .3s'; panel.style.opacity = '0'; panel.style.transform = 'translateY(-10px)'; setTimeout(() => panel.remove(), 300); }
+        } else { alert(data.msg || '操作失败'); }
+    }).catch(() => alert('请求失败'));
 }
 </script>
 {% endblock %}

@@ -1,45 +1,98 @@
 {% extends "admin/base.html" %}
 {% block title %}食材管理{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h2>🥕 食材管理</h2>
-    <button class="btn btn-primary" onclick="openModal('addModal')">➕ 添加食材</button>
+<div class="page-header-v4">
+    <div class="ph-left">
+        <div class="ph-crumb">
+            <a href="/admin/dashboard">管理控制台</a>
+            <span class="sep">/</span>
+            <span>内容管理</span>
+            <span class="sep">/</span>
+            <span>食材管理</span>
+        </div>
+        <h1>食材营养库 <span class="ph-badge"><span class="dot"></span>{{ pagination.total }} 种食材</span></h1>
+        <p class="ph-desc">维护食材的营养成分数据库（每 100g 营养值），用于精确计算菜谱的热量与营养组成。</p>
+    </div>
+    <div class="ph-actions">
+        <button class="btn btn-primary btn-lg" onclick="openModal('addModal')">➕ 添加食材</button>
+    </div>
 </div>
-<div class="card">
-    <form class="search-bar" method="GET">
-        <input type="text" name="keyword" class="form-control" placeholder="搜索食材名称..." value="{{ keyword }}">
+
+<form class="toolbar" method="GET">
+    <div class="tb-search">
+        <input type="text" name="keyword" placeholder="搜索食材名称..." value="{{ keyword }}">
+    </div>
+    <div class="tb-actions">
         <button class="btn btn-primary">🔍 搜索</button>
-        {% if keyword %}<a href="/admin/ingredients" class="btn btn-outline">清除</a>{% endif %}
-    </form>
-    <div class="table-wrapper">
-        <table class="data-table">
-            <thead><tr><th>图片</th><th>名称</th><th>分类</th><th>单位</th><th>热量</th><th>蛋白质</th><th>脂肪</th><th>碳水</th><th>纤维</th><th>操作</th></tr></thead>
-            <tbody>
-            {% for ing in pagination.items %}
-            <tr>
-                <td>{% if ing.image %}<img src="{{ ing.image }}" class="table-img">{% else %}-{% endif %}</td>
-                <td><strong>{{ ing.name }}</strong></td>
-                <td><span class="badge badge-primary">{{ ing.category }}</span></td>
-                <td>{{ ing.unit }}</td>
-                <td>{{ ing.calories }}千卡</td>
-                <td>{{ ing.protein }}g</td>
-                <td>{{ ing.fat }}g</td>
-                <td>{{ ing.carbs }}g</td>
-                <td>{{ ing.fiber }}g</td>
-                <td class="table-actions">
-                    <button class="btn btn-info btn-sm" onclick="editIng({{ ing.id }},'{{ ing.name }}','{{ ing.category }}','{{ ing.unit }}','{{ ing.image }}',{{ ing.protein }},{{ ing.fat }},{{ ing.carbs }},{{ ing.calories }},{{ ing.fiber }})">编辑</button>
-                    <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/ingredients/delete/{{ ing.id }}','{{ ing.name }}')">删除</button>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+        {% if keyword %}<a href="/admin/ingredients" class="btn btn-outline">清除筛选</a>{% endif %}
+    </div>
+</form>
+
+<div class="panel">
+    <div class="panel-head">
+        <div class="panel-title">
+            <div class="panel-icon">🥕</div>
+            <h3>食材列表</h3>
+            <span class="panel-sub">每 100g 营养成分 · 共 {{ pagination.total }} 条</span>
+        </div>
+        <div class="panel-actions">
+            <span class="chip chip-primary">本页 {{ pagination.items|length }} 条</span>
+        </div>
+    </div>
+    <div class="panel-body no-pad">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>食材</th><th>分类</th><th>单位</th><th>热量</th><th>蛋白质</th><th>脂肪</th><th>碳水</th><th>纤维</th><th>操作</th></tr></thead>
+                <tbody>
+                {% for ing in pagination.items %}
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            {% if ing.image %}
+                            <img src="{{ ing.image }}" class="table-img" style="width:40px;height:40px;border-radius:8px;">
+                            {% else %}
+                            <div style="width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,var(--primary-bg),rgba(107,143,113,0.1));display:flex;align-items:center;justify-content:center;font-size:16px;">🥗</div>
+                            {% endif %}
+                            <div>
+                                <div style="font-weight:600;color:var(--text-dark);">{{ ing.name }}</div>
+                                <div style="font-size:11px;color:var(--text-light);">ID: {{ ing.id }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="chip chip-primary">{{ ing.category or '其他' }}</span></td>
+                    <td><span style="font-size:12px;color:var(--text-muted);">{{ ing.unit }}</span></td>
+                    <td><strong style="color:var(--primary-dark);">{{ ing.calories }}</strong><small style="color:var(--text-muted);"> 千卡</small></td>
+                    <td>{{ ing.protein }}<small style="color:var(--text-light);"> g</small></td>
+                    <td>{{ ing.fat }}<small style="color:var(--text-light);"> g</small></td>
+                    <td>{{ ing.carbs }}<small style="color:var(--text-light);"> g</small></td>
+                    <td>{{ ing.fiber }}<small style="color:var(--text-light);"> g</small></td>
+                    <td class="table-actions">
+                        <button class="btn btn-info btn-sm" onclick="editIng({{ ing.id }},'{{ ing.name }}','{{ ing.category }}','{{ ing.unit }}','{{ ing.image }}',{{ ing.protein }},{{ ing.fat }},{{ ing.carbs }},{{ ing.calories }},{{ ing.fiber }})">✏️ 编辑</button>
+                        <button class="btn btn-danger btn-sm" onclick="confirmDelete('/admin/ingredients/delete/{{ ing.id }}','{{ ing.name }}')">删除</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not pagination.items %}
+                <tr><td colspan="9">
+                    <div class="empty-state-v4" style="padding:40px;">
+                        <div class="es-icon">🥕</div>
+                        <h3>没有找到食材</h3>
+                        <p>{% if keyword %}尝试调整搜索关键词{% else %}点击"添加食材"开始录入{% endif %}</p>
+                    </div>
+                </td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
     </div>
     {% if pagination.pages > 1 %}
-    <div class="pagination">
-        {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">上一页</a>{% endif %}
-        {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&keyword={{ keyword }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
-        {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页</a>{% endif %}
+    <div class="panel-foot">
+        <span>共 {{ pagination.total }} 条记录，当前第 {{ pagination.page }} / {{ pagination.pages }} 页</span>
+        <div class="pagination" style="margin:0;">
+            {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&keyword={{ keyword }}">‹ 上一页</a>{% else %}<span class="disabled">‹ 上一页</span>{% endif %}
+            {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&keyword={{ keyword }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span class="disabled">...</span>{% endif %}{% endfor %}
+            {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&keyword={{ keyword }}">下一页 ›</a>{% else %}<span class="disabled">下一页 ›</span>{% endif %}
+        </div>
     </div>
     {% endif %}
 </div>

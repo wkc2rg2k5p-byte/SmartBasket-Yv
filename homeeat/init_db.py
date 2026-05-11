@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask
 from config import Config
-from models import db, User, Family, Recipe, Ingredient, RecipeRecord, ChatMessage, ShoppingList, WeeklyReport
+from models import db, User, Family, Recipe, Ingredient, RecipeRecord, ChatSession, ChatMessage, ShoppingList, WeeklyReport
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -35,140 +35,81 @@ def init_database():
 
         # ========== 1. 创建家庭 ==========
         family1 = Family(
-            name='幸福之家',
-            invite_code='HAPPY2024',
-            description='我们是一个热爱美食的温馨家庭',
-            avatar='https://picsum.photos/seed/family1/200'
+            name='张家',
+            invite_code='ZHANG888',
+            description='张家一家三口，健康饮食，快乐生活',
+            avatar='/uploads/avatar_mom.png'
         )
-        family2 = Family(
-            name='美味小窝',
-            invite_code='YUMMY2024',
-            description='吃货一家人，每天都要吃好吃的',
-            avatar='https://picsum.photos/seed/family2/200'
-        )
-        db.session.add_all([family1, family2])
+        db.session.add(family1)
         db.session.flush()
         print("家庭数据创建成功")
 
-        # ========== 2. 创建用户 ==========
-        admin = User(
-            username='admin',
+        # ========== 2. 创建用户（3个家庭成员） ==========
+        user_grandma = User(
+            username='grandma',
             password=generate_password_hash('123456'),
-            role='admin',
-            nickname='系统管理员',
-            avatar='https://randomuser.me/api/portraits/men/32.jpg',
-            gender='男',
-            age=35,
-            height=175,
-            weight=70
+            role='user',
+            nickname='张奶奶',
+            avatar='/uploads/avatar_grandma.png',
+            gender='女',
+            age=68,
+            height=158,
+            weight=62,
+            diseases='糖尿病',
+            allergies='',
+            special_diet='低糖饮食',
+            taste_likes='清淡,炖煮,蒸',
+            taste_dislikes='',
+            health_goal='控制血糖，均衡营养',
+            family_id=family1.id,
+            is_family_admin=False
         )
 
-        test_user = User(
-            username='test',
+        user_mom = User(
+            username='mom',
             password=generate_password_hash('123456'),
             role='user',
             nickname='张妈妈',
-            avatar='https://randomuser.me/api/portraits/women/44.jpg',
+            avatar='/uploads/avatar_mom.png',
             gender='女',
-            age=38,
+            age=35,
             height=163,
-            weight=55,
+            weight=65,
+            diseases='',
+            allergies='',
+            special_diet='低脂饮食',
+            taste_likes='清淡,微辣,酸甜',
+            taste_dislikes='',
+            health_goal='减肥瘦身，控制体重',
+            family_id=family1.id,
+            is_family_admin=True
+        )
+
+        user_kid = User(
+            username='kid',
+            password=generate_password_hash('123456'),
+            role='user',
+            nickname='张小孩',
+            avatar='/uploads/avatar_kid.png',
+            gender='男',
+            age=10,
+            height=140,
+            weight=35,
             diseases='',
             allergies='海鲜过敏',
-            special_diet='低盐饮食',
-            taste_likes='清淡,微辣,酸甜',
-            taste_dislikes='虾,螃蟹,生蚝',
-            health_goal='均衡营养，控制体重',
-            family_id=family1.id,
-            is_family_admin=True
-        )
-
-        user3 = User(
-            username='zhangba',
-            password=generate_password_hash('123456'),
-            role='user',
-            nickname='张爸爸',
-            avatar='https://randomuser.me/api/portraits/men/46.jpg',
-            gender='男',
-            age=40,
-            height=178,
-            weight=80,
-            diseases='高血压',
-            allergies='',
-            special_diet='低盐低脂',
-            taste_likes='麻辣,红烧,烧烤',
-            taste_dislikes='苦瓜,芹菜',
-            health_goal='控制血压，减重',
-            family_id=family1.id,
-            is_family_admin=False
-        )
-
-        user4 = User(
-            username='xiaoming',
-            password=generate_password_hash('123456'),
-            role='user',
-            nickname='小明',
-            avatar='https://randomuser.me/api/portraits/men/3.jpg',
-            gender='男',
-            age=12,
-            height=155,
-            weight=45,
-            diseases='',
-            allergies='花生过敏',
             special_diet='',
             taste_likes='甜,炸鸡,可乐',
-            taste_dislikes='胡萝卜,花生',
-            health_goal='长高长壮',
+            taste_dislikes='苦瓜',
+            health_goal='长高长壮，营养均衡',
             family_id=family1.id,
             is_family_admin=False
         )
 
-        user5 = User(
-            username='lili',
-            password=generate_password_hash('123456'),
-            role='user',
-            nickname='李丽',
-            avatar='https://randomuser.me/api/portraits/women/26.jpg',
-            gender='女',
-            age=32,
-            height=165,
-            weight=52,
-            diseases='',
-            allergies='',
-            special_diet='素食主义',
-            taste_likes='清淡,蔬菜,豆腐',
-            taste_dislikes='肥肉,内脏',
-            health_goal='保持身材，健康饮食',
-            family_id=family2.id,
-            is_family_admin=True
-        )
-
-        user6 = User(
-            username='wangda',
-            password=generate_password_hash('123456'),
-            role='user',
-            nickname='王大',
-            avatar='https://randomuser.me/api/portraits/men/52.jpg',
-            gender='男',
-            age=35,
-            height=180,
-            weight=85,
-            diseases='糖尿病',
-            allergies='牛奶过敏',
-            special_diet='低糖饮食',
-            taste_likes='清蒸,炖煮,凉拌',
-            taste_dislikes='甜食,牛奶,奶酪',
-            health_goal='控制血糖',
-            family_id=family2.id,
-            is_family_admin=False
-        )
-
-        db.session.add_all([admin, test_user, user3, user4, user5, user6])
+        db.session.add_all([user_grandma, user_mom, user_kid])
         db.session.flush()
 
         # 更新家庭创建者
-        family1.created_by = test_user.id
-        family2.created_by = user5.id
+        family1.created_by = user_mom.id
         db.session.flush()
         print("用户数据创建成功")
 
@@ -176,7 +117,7 @@ def init_database():
         ingredients_data = [
             {'name': '猪肉', 'category': '肉类', 'unit': 'g', 'protein': 20.3, 'fat': 6.2, 'carbs': 1.5, 'calories': 143, 'fiber': 0,
              'image': 'https://www.themealdb.com/images/ingredients/pork.png', 'description': '优质蛋白质来源'},
-            {'name': '鸡肉', 'category': '肉类', 'unit': 'g', 'protein': 23.3, 'fat': 1.2, 'carbs': 0, 'calories': 104, 'fiber': 0,
+            {'name': '鸡���', 'category': '肉类', 'unit': 'g', 'protein': 23.3, 'fat': 1.2, 'carbs': 0, 'calories': 104, 'fiber': 0,
              'image': 'https://www.themealdb.com/images/ingredients/chicken.png', 'description': '低脂高蛋白'},
             {'name': '牛肉', 'category': '肉类', 'unit': 'g', 'protein': 26.2, 'fat': 3.5, 'carbs': 0, 'calories': 125, 'fiber': 0,
              'image': 'https://www.themealdb.com/images/ingredients/beef.png', 'description': '富含铁和锌'},
@@ -347,7 +288,7 @@ def init_database():
                     {'name': '辣椒油', 'amount': '1勺', 'unit': '勺'},
                     {'name': '醋', 'amount': '2勺', 'unit': '勺'}
                 ], ensure_ascii=False),
-                'steps': '1. 黄瓜拍碎切段\n2. 蒜切末\n3. 加醋、酱油、辣椒油、盐\n4. 拌匀腌制5分钟即可',
+                'steps': '1. 黄瓜拍碎切段\n2. 蒜切末\n3. 加醋���酱油、辣椒油、盐\n4. 拌匀腌制5分钟即可',
                 'calories': 35, 'protein': 1.5, 'fat': 2, 'carbs': 4, 'fiber': 1,
                 'description': '开胃爽口的凉菜'
             },
@@ -409,7 +350,7 @@ def init_database():
                     {'name': '枸杞', 'amount': '10g', 'unit': 'g'},
                     {'name': '盐', 'amount': '适量', 'unit': ''}
                 ], ensure_ascii=False),
-                'steps': '1. 鸡肉切块焯水\n2. 香菇泡发切片\n3. 砂锅放入鸡肉、姜片、水\n4. 大火烧开转小火炖30分钟\n5. 加入香菇继续炖10分钟\n6. 加盐和枸杞调味',
+                'steps': '1. 鸡肉切��焯水\n2. 香菇泡发切片\n3. 砂锅放入鸡肉、姜片、水\n4. 大火烧开转小火炖30分钟\n5. 加入香菇继续炖10分钟\n6. 加盐和枸杞调味',
                 'calories': 200, 'protein': 28, 'fat': 8, 'carbs': 5, 'fiber': 1.5,
                 'description': '滋补养身的家庭汤品'
             },
@@ -437,7 +378,7 @@ def init_database():
             total_carb = sum(r['carbs'] for r in meal_recipes)
             rec = RecipeRecord(
                 family_id=family1.id,
-                user_id=test_user.id,
+                user_id=user_mom.id,
                 date=d,
                 meal_type=['breakfast', 'lunch', 'dinner'][i % 3],
                 recipes_json=json.dumps([{
@@ -464,30 +405,40 @@ def init_database():
         db.session.flush()
         print("点菜记录创建成功")
 
-        # ========== 6. 创建聊天记录 ==========
+        # ========== 6. 创建聊天会话和聊天记录 ==========
+        session1 = ChatSession(
+            family_id=family1.id,
+            started_by=user_mom.id,
+            status='completed',
+            created_at=datetime.now() - timedelta(hours=3),
+            ended_at=datetime.now() - timedelta(hours=2)
+        )
+        db.session.add(session1)
+        db.session.flush()
+
         chat_messages = [
-            ChatMessage(family_id=family1.id, user_id=test_user.id,
+            ChatMessage(family_id=family1.id, user_id=user_mom.id, session_id=session1.id,
                         message='今晚大家想吃什么呀？', msg_type='text',
                         created_at=datetime.now() - timedelta(hours=3)),
-            ChatMessage(family_id=family1.id, user_id=user3.id,
-                        message='我想吃红烧肉！', msg_type='text',
+            ChatMessage(family_id=family1.id, user_id=user_grandma.id, session_id=session1.id,
+                        message='我想吃点清淡的，蒸鱼或者炖汤都可以', msg_type='text',
                         created_at=datetime.now() - timedelta(hours=2, minutes=50)),
-            ChatMessage(family_id=family1.id, user_id=user4.id,
+            ChatMessage(family_id=family1.id, user_id=user_kid.id, session_id=session1.id,
                         message='我要吃炸鸡！还有可乐！', msg_type='text',
                         created_at=datetime.now() - timedelta(hours=2, minutes=40)),
-            ChatMessage(family_id=family1.id, user_id=test_user.id,
-                        message='小明不能天天吃炸鸡，要注意营养均衡哦', msg_type='text',
+            ChatMessage(family_id=family1.id, user_id=user_mom.id, session_id=session1.id,
+                        message='小孩不能天天吃炸鸡，要注意营养均衡哦', msg_type='text',
                         created_at=datetime.now() - timedelta(hours=2, minutes=30)),
-            ChatMessage(family_id=family1.id, user_id=user3.id,
+            ChatMessage(family_id=family1.id, user_id=user_grandma.id, session_id=session1.id,
                         message='弄个汤吧，再配个青菜', msg_type='text',
                         created_at=datetime.now() - timedelta(hours=2, minutes=20)),
-            ChatMessage(family_id=family1.id, user_id=test_user.id,
+            ChatMessage(family_id=family1.id, user_id=user_mom.id, session_id=session1.id,
                         message='好的，那今晚做红烧肉、清炒西兰花、紫菜蛋花汤', msg_type='text',
                         created_at=datetime.now() - timedelta(hours=2, minutes=10)),
         ]
         db.session.add_all(chat_messages)
         db.session.flush()
-        print("聊天记录创建成功")
+        print("聊天会话和记录创建成功")
 
         # ========== 7. 创建采购清单 ==========
         shopping1 = ShoppingList(
@@ -530,8 +481,8 @@ def init_database():
                 {'name': '紫菜蛋花汤', 'count': 2},
                 {'name': '麻婆豆腐', 'count': 1}
             ], ensure_ascii=False),
-            nutrition_analysis='本周饮食结构整体较为均衡。蛋白质摄入主要来源于鸡蛋和猪肉，共占蛋白质总摄入的65%。蔬菜摄入量充足，西兰花和白菜提供了丰富的膳食纤维和维生素。碳水化合物摄入以米饭为主，占比适中。',
-            suggestions='1. 建议增加鱼类的摄入频次，补充不饱和脂肪酸和DHA\n2. 适当减少红烧肉等高脂菜品的频次\n3. 可以增加豆制品（如豆腐）的摄入，补充植物蛋白\n4. 建议每天保证至少两种以上蔬菜的摄入\n5. 小明成长期需要注意钙质补充，建议增加牛奶或钙片',
+            nutrition_analysis='本周饮食结构整体较为均衡。蛋白质摄入主要来源于鸡蛋和猪肉，共占蛋白质总摄入的65%。蔬菜摄入量充足，西兰花和白菜提供了丰富的膳食纤维和维生��。碳水化合物摄入以米饭为主，占比适中。',
+            suggestions='1. 张奶奶有糖尿病，建议控制甜味菜品和高碳水食物的摄入\n2. 张妈妈想要减肥，建议减少红烧肉等高脂菜品的频次\n3. 张小孩海鲜过敏，本周已避免所有海鲜类菜品\n4. 建议增加豆制品（如豆腐）的摄入，补充植物蛋白\n5. 建议每天保证至少两种以上蔬菜的摄入',
             report_data=json.dumps({
                 'daily_calories': [280, 310, 250, 320, 270, 290, 275],
                 'daily_protein': [18, 22, 16, 20, 17, 19, 18],
@@ -546,11 +497,12 @@ def init_database():
 
         db.session.commit()
         print("\n========== 数据库初始化完成 ==========")
-        print(f"家庭: 2个")
-        print(f"用户: 6个 (admin/123456, test/123456, zhangba/123456, xiaoming/123456, lili/123456, wangda/123456)")
+        print(f"家庭: 1个 (张家)")
+        print(f"用户: 3个 (grandma/123456, mom/123456, kid/123456)")
         print(f"食材: {len(ingredients_data)}种")
         print(f"菜谱: {len(recipes_data)}道")
         print(f"点菜记录: {len(records_data)}条")
+        print(f"聊天会话: 1个")
         print(f"聊天记录: {len(chat_messages)}条")
         print(f"采购清单: 1条")
         print(f"健康周报: 1条")

@@ -6,6 +6,7 @@ import os
 import json
 import uuid
 import random
+import requests
 from datetime import datetime, date, timedelta
 from functools import wraps
 
@@ -17,7 +18,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 from config import Config
-from models import db, User, Family, Recipe, Ingredient, RecipeRecord, ChatMessage, ShoppingList, WeeklyReport
+from models import db, User, Family, Recipe, Ingredient, RecipeRecord, ChatSession, ChatMessage, ShoppingList, WeeklyReport
 
 # ========== 应用初始化 ==========
 app = Flask(__name__)
@@ -79,9 +80,8 @@ def uploaded_file(filename):
 # ========== 认证路由 ==========
 @app.route('/')
 def index():
+    """根路径直接跳转"""
     if current_user.is_authenticated:
-        if current_user.role == 'admin':
-            return redirect(url_for('admin_dashboard'))
         return redirect(url_for('user_home'))
     return redirect(url_for('login'))
 
@@ -94,8 +94,6 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
-            if user.role == 'admin':
-                return redirect(url_for('admin_dashboard'))
             return redirect(url_for('user_home'))
         flash('用户名或密码错误', 'error')
     return render_template('login.html')
@@ -251,12 +249,19 @@ def user_ordering():
         return redirect(url_for('user_family'))
     family = Family.query.get(current_user.family_id)
     members = User.query.filter_by(family_id=current_user.family_id).all()
-    messages = ChatMessage.query.filter_by(
-        family_id=current_user.family_id
-    ).order_by(ChatMessage.created_at.asc()).limit(100).all()
+    # 查找当前活跃的会话
+    active_session = ChatSession.query.filter_by(
+        family_id=current_user.family_id, status='active'
+    ).first()
+    messages = []
+    if active_session:
+        messages = ChatMessage.query.filter_by(
+            session_id=active_session.id
+        ).order_by(ChatMessage.created_at.asc()).all()
     recipes = Recipe.query.all()
     return render_template('user/ordering.html', family=family,
-                           members=members, messages=messages, recipes=recipes)
+                           members=members, messages=messages, recipes=recipes,
+                           active_session=active_session)
 
 
 @app.route('/user/shopping')
@@ -293,18 +298,124 @@ def user_report():
 
 
 # ========== 用户 API ==========
-@app.route('/api/generate_recipe', methods=['POST'])
+@app.route('/api/session/start', methods=['POST'])
 @login_required
-def generate_recipe():
-    """AI智能生成菜谱"""
+def start_session():
+    """开始一次新的点菜会话"""
     if not current_user.family_id:
         return jsonify({'code': 1, 'msg': '请先加入家庭'})
+    # 检查是否有进行中的会话
+    existing = ChatSession.query.filter_by(
+        family_id=current_user.family_id, status='active'
+    ).first()
+    if existing:
+        return jsonify({'code': 0, 'msg': '已有进行中的会话', 'data': {'session_id': existing.id}})
+    session_obj = ChatSession(
+        family_id=current_user.family_id,
+        started_by=current_user.id,
+        status='active'
+    )
+    db.session.add(session_obj)
+    db.session.commit()
+    # 发送系统消息
+    room = f"family_{current_user.family_id}"
+    socketio.emit('session_started', {
+        'session_id': session_obj.id,
+        'started_by': current_user.nickname,
+        'msg': f'🍽️ {current_user.nickname} 开始了新一轮点菜，大家快来说说想吃什么吧！'
+    }, room=room)
+    return jsonify({'code': 0, 'msg': '点菜会话已开始', 'data': {'session_id': session_obj.id}})
 
-    # 获取家庭成员信息和聊天记录
-    members = User.query.filter_by(family_id=current_user.family_id).all()
+
+@app.route('/api/session/end', methods=['POST'])
+@login_required
+def end_session():
+    """结束当前点菜会话并生成菜谱"""
+    if not current_user.family_id:
+        return jsonify({'code': 1, 'msg': '请先加入家庭'})
+    active_session = ChatSession.query.filter_by(
+        family_id=current_user.family_id, status='active'
+    ).first()
+    if not active_session:
+        return jsonify({'code': 1, 'msg': '当前没有进行中的会话'})
+    # 获取本次会话的聊天记录
     messages = ChatMessage.query.filter_by(
-        family_id=current_user.family_id
-    ).order_by(ChatMessage.created_at.desc()).limit(20).all()
+        session_id=active_session.id
+    ).order_by(ChatMessage.created_at.asc()).all()
+    if not messages:
+        return jsonify({'code': 1, 'msg': '本次会话还没有聊天记录，请先讨论想吃什么'})
+    # 结束会话
+    active_session.status = 'completed'
+    active_session.ended_at = datetime.now()
+    db.session.commit()
+    # 调用菜谱生成逻辑
+    result = _generate_recipe_from_session(active_session, messages)
+    # 通知房间
+    room = f"family_{current_user.family_id}"
+    socketio.emit('session_ended', {
+        'session_id': active_session.id,
+        'msg': f'🤖 点菜会话结束，AI 已生成菜谱推荐！'
+    }, room=room)
+    return result
+
+
+def _call_ai_api(prompt):
+    """调用 AI 大模型 API"""
+    try:
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {app.config["AI_API_KEY"]}'
+        }
+        payload = {
+            'model': app.config['AI_MODEL'],
+            'messages': [
+                {'role': 'system', 'content': '你是一个专业的家庭营养师和厨师，根据家庭成员的健康状况、口味偏好和讨论内容推荐合适的菜谱。请严格只返回JSON格式数据，不要包含任何其他文字说明。'},
+                {'role': 'user', 'content': prompt}
+            ],
+            'temperature': 0.7,
+            'max_tokens': 2000
+        }
+        resp = requests.post(
+            app.config['AI_API_URL'],
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            content = data['choices'][0]['message']['content']
+            content = content.strip()
+            print(f'[AI] Raw response length: {len(content)}')
+            # 策略1：移除 markdown 代码块
+            if '```' in content:
+                import re
+                code_match = re.search(r'```(?:json)?\s*\n?(.*?)```', content, re.DOTALL)
+                if code_match:
+                    content = code_match.group(1).strip()
+            # 策略2：提取第一个 { 到最后一个 } 之间的内容
+            if not content.startswith('{'):
+                start = content.find('{')
+                end = content.rfind('}')
+                if start != -1 and end != -1:
+                    content = content[start:end+1]
+            result = json.loads(content)
+            print(f'[AI] Successfully parsed JSON, recipes: {len(result.get("recipes", []))}')
+            return result
+        else:
+            print(f'[AI] API error: {resp.status_code} {resp.text[:200]}')
+            return None
+    except json.JSONDecodeError as e:
+        print(f'[AI] JSON parse failed: {e}, content: {content[:200]}')
+        return None
+    except Exception as e:
+        print(f'[AI] API call failed: {e}')
+        return None
+
+
+def _generate_recipe_from_session(session_obj, messages):
+    """根据会话聊天记录生成菜谱（内部方法）"""
+    # 获取家庭成员信息
+    members = User.query.filter_by(family_id=session_obj.family_id).all()
 
     # 收集成员偏好和忌口
     all_likes = []
@@ -326,7 +437,69 @@ def generate_recipe():
     for msg in messages:
         chat_keywords.append(msg.message)
 
-    # 基于成员偏好从数据库匹配菜谱（模拟AI推荐）
+    # === 尝试调用 AI 大模型 ===
+    member_info = '\n'.join([
+        f'- {m.nickname}: {m.gender or "未知"}，{m.age or "未知"}岁，'
+        f'喜欢{m.taste_likes or "无"}，忌口{m.taste_dislikes or "无"}，'
+        f'过敏{m.allergies or "无"}，疾病{m.diseases or "无"}'
+        for m in members
+    ])
+    chat_history = '\n'.join([f'{msg.user.nickname}: {msg.message}' for msg in messages])
+
+    ai_prompt = f"""家庭成员信息：
+{member_info}
+
+家庭成员讨论内容：
+{chat_history}
+
+请根据以上信息推荐3-4道适合这个家庭的菜品。要考虑每个成员的口味偏好、忌口、过敏和健康状况。
+请严格按如下JSON格式返回（不要返回其他内容）：
+{{
+  "recipes": [
+    {{
+      "name": "菜名",
+      "category": "荤菜/素菜/汤品/主食",
+      "taste": "口味如清淡/微辣/咸鲜",
+      "difficulty": "简单/中等/复杂",
+      "cook_time": 30,
+      "calories": 300,
+      "protein": 20,
+      "fat": 10,
+      "carbs": 25,
+      "ingredients": [{{"name": "食材名", "amount": "用量", "unit": "单位"}}],
+      "steps": "步骤1...\n步骤2...",
+      "reason": "推荐理由"
+    }}
+  ],
+  "conflicts": ["可能的忌口冲突提醒"]
+}}"""
+
+    ai_result = _call_ai_api(ai_prompt)
+
+    # 如�� AI 返回了有效结果
+    if ai_result and 'recipes' in ai_result and len(ai_result['recipes']) > 0:
+        result_recipes = []
+        for i, r in enumerate(ai_result['recipes'][:5]):
+            result_recipes.append({
+                'id': i + 1,
+                'name': r.get('name', '未知菜品'),
+                'image': '',
+                'category': r.get('category', '家常菜'),
+                'taste': r.get('taste', '咸鲜'),
+                'difficulty': r.get('difficulty', '中等'),
+                'cook_time': r.get('cook_time', 30),
+                'ingredients': r.get('ingredients', []),
+                'steps': r.get('steps', ''),
+                'calories': r.get('calories', 300),
+                'protein': r.get('protein', 15),
+                'fat': r.get('fat', 10),
+                'carbs': r.get('carbs', 25)
+            })
+        conflicts = ai_result.get('conflicts', [])
+        return _save_recipe_result(session_obj, result_recipes, conflicts)
+
+    # === AI 调用失败，回退到本地匹配算法 ===
+    print('AI API unavailable, using local scoring fallback')
     all_recipes = Recipe.query.all()
     scored_recipes = []
     for recipe in all_recipes:
@@ -346,12 +519,23 @@ def generate_recipe():
             allergy = allergy.strip()
             if allergy and allergy in recipe.ingredients_json:
                 score -= 100
-        # 聊天关键词匹配
+        # 聊天关键词匹配（提取口味偏好和菜名）
+        taste_keywords = ['辣', '麻辣', '酸辣', '���辣', '清淡', '甜', '酸', '咸', '鲜', '香', '酸甜', '咸鲜', '咸甜']
         for keyword in chat_keywords:
-            if recipe.name in keyword or recipe.taste in keyword:
-                score += 20
-            if recipe.cuisine in keyword:
-                score += 10
+            # 菜名直接匹配
+            if recipe.name in keyword:
+                score += 30
+            # 口味关键词匹配：检查用户消息中是否包含口味词，且该口味词与菜品口味相关
+            for tw in taste_keywords:
+                if tw in keyword:
+                    if tw in recipe.taste or tw in recipe.cuisine:
+                        score += 25
+                    # 用户说"辣"，菜品口味含"辣"（如麻辣、酸辣）也应匹配
+                    elif tw == '辣' and '辣' in recipe.taste:
+                        score += 25
+            # 菜系匹配
+            if recipe.cuisine and recipe.cuisine in keyword:
+                score += 15
         # 健康状况考虑
         if '高血压' in str(all_diseases) and recipe.taste in ['咸', '麻辣']:
             score -= 20
@@ -414,18 +598,23 @@ def generate_recipe():
             'carbs': recipe.carbs
         })
 
+    return _save_recipe_result(session_obj, result_recipes, conflicts)
+
+
+def _save_recipe_result(session_obj, result_recipes, conflicts):
+    """保存菜谱结果、生成采购清单（AI和本地共用）"""
     # 保存点菜记录
     today_date = date.today()
     record = RecipeRecord(
-        family_id=current_user.family_id,
-        user_id=current_user.id,
+        family_id=session_obj.family_id,
+        user_id=session_obj.started_by,
         date=today_date,
-        meal_type=request.json.get('meal_type', 'dinner') if request.is_json else 'dinner',
+        meal_type='dinner',
         recipes_json=json.dumps(result_recipes, ensure_ascii=False),
-        total_calories=sum(r['calories'] for r in result_recipes),
-        total_protein=sum(r['protein'] for r in result_recipes),
-        total_fat=sum(r['fat'] for r in result_recipes),
-        total_carbs=sum(r['carbs'] for r in result_recipes),
+        total_calories=sum(r.get('calories', 0) for r in result_recipes),
+        total_protein=sum(r.get('protein', 0) for r in result_recipes),
+        total_fat=sum(r.get('fat', 0) for r in result_recipes),
+        total_carbs=sum(r.get('carbs', 0) for r in result_recipes),
         status='active'
     )
     db.session.add(record)
@@ -434,20 +623,22 @@ def generate_recipe():
     # 自动生成采购清单
     all_ingredients = {}
     for recipe_data in result_recipes:
-        for ing in recipe_data['ingredients']:
-            name = ing['name']
+        for ing in recipe_data.get('ingredients', []):
+            name = ing.get('name', '')
+            if not name:
+                continue
             if name in all_ingredients:
-                all_ingredients[name]['amount'] += f" + {ing['amount']}"
+                all_ingredients[name]['amount'] += f" + {ing.get('amount', '')}"
             else:
                 all_ingredients[name] = {
                     'name': name,
-                    'amount': ing['amount'],
+                    'amount': ing.get('amount', '适量'),
                     'unit': ing.get('unit', ''),
                     'checked': False
                 }
 
     shopping = ShoppingList(
-        family_id=current_user.family_id,
+        family_id=session_obj.family_id,
         record_id=record.id,
         date=today_date,
         items_json=json.dumps(list(all_ingredients.values()), ensure_ascii=False),
@@ -459,9 +650,10 @@ def generate_recipe():
     # 发送系统消息到聊天
     recipe_names = '、'.join([r['name'] for r in result_recipes])
     sys_msg = ChatMessage(
-        family_id=current_user.family_id,
-        user_id=current_user.id,
-        message=f'🍽️ 已生成今日菜谱推荐：{recipe_names}',
+        family_id=session_obj.family_id,
+        user_id=session_obj.started_by,
+        session_id=session_obj.id,
+        message=f'🍽️ AI已生成今日菜谱推荐：{recipe_names}',
         msg_type='recipe'
     )
     db.session.add(sys_msg)
@@ -500,6 +692,35 @@ def toggle_shopping_item():
             shopping.status = 'pending'
         db.session.commit()
     return jsonify({'code': 0, 'msg': '更新成功'})
+
+
+@app.route('/api/shopping/complete/<int:shopping_id>', methods=['POST'])
+@login_required
+def complete_shopping(shopping_id):
+    """标记采购清单为已完成"""
+    shopping = ShoppingList.query.get(shopping_id)
+    if not shopping:
+        return jsonify({'code': 1, 'msg': '清单不存在'})
+    # 将所有项目标记为已勾选
+    items = json.loads(shopping.items_json)
+    for item in items:
+        item['checked'] = True
+    shopping.items_json = json.dumps(items, ensure_ascii=False)
+    shopping.status = 'completed'
+    db.session.commit()
+    return jsonify({'code': 0, 'msg': '采购完成'})
+
+
+@app.route('/api/shopping/delete/<int:shopping_id>', methods=['POST'])
+@login_required
+def delete_shopping(shopping_id):
+    """删除采购清单"""
+    shopping = ShoppingList.query.get(shopping_id)
+    if not shopping:
+        return jsonify({'code': 1, 'msg': '清单不存在'})
+    db.session.delete(shopping)
+    db.session.commit()
+    return jsonify({'code': 0, 'msg': '清单已删除'})
 
 
 @app.route('/api/history/reuse/<int:record_id>', methods=['POST'])
@@ -694,9 +915,15 @@ def on_message(data):
     if not family_id or not message:
         return
 
+    # 查找当前活跃会话
+    active_session = ChatSession.query.filter_by(
+        family_id=family_id, status='active'
+    ).first()
+
     msg = ChatMessage(
         family_id=family_id,
         user_id=current_user.id,
+        session_id=active_session.id if active_session else None,
         message=message,
         msg_type='text'
     )
@@ -732,8 +959,65 @@ def admin_dashboard():
     }
     recent_records = RecipeRecord.query.order_by(RecipeRecord.created_at.desc()).limit(5).all()
     recent_users = User.query.filter_by(role='user').order_by(User.created_at.desc()).limit(5).all()
+
+    # ===== 图表数据聚合 =====
+    today_d = date.today()
+    # 最近 7 天点菜趋势 + 聊天活跃度
+    days_labels, day_records, day_chats = [], [], []
+    for i in range(6, -1, -1):
+        d = today_d - timedelta(days=i)
+        days_labels.append(d.strftime('%m-%d'))
+        day_records.append(
+            RecipeRecord.query.filter(RecipeRecord.date == d).count()
+        )
+        day_chats.append(
+            ChatMessage.query.filter(
+                ChatMessage.created_at >= datetime.combine(d, datetime.min.time()),
+                ChatMessage.created_at < datetime.combine(d + timedelta(days=1), datetime.min.time())
+            ).count()
+        )
+
+    # 菜谱分类占比
+    recipes_all = Recipe.query.all()
+    cat_count = {}
+    for r in recipes_all:
+        key = r.category or '其他'
+        cat_count[key] = cat_count.get(key, 0) + 1
+    recipe_cat_data = [{'name': k, 'value': v} for k, v in cat_count.items()]
+
+    # 食材分类占比
+    ingredients_all = Ingredient.query.all()
+    ing_cat = {}
+    for ing in ingredients_all:
+        key = ing.category or '其他'
+        ing_cat[key] = ing_cat.get(key, 0) + 1
+    ingredient_cat_data = [{'name': k, 'value': v} for k, v in ing_cat.items()]
+
+    # 热门菜品 TOP10
+    all_records = RecipeRecord.query.all()
+    pop = {}
+    for rec in all_records:
+        try:
+            for r in json.loads(rec.recipes_json or '[]'):
+                name = r.get('name', '')
+                if name:
+                    pop[name] = pop.get(name, 0) + 1
+        except Exception:
+            pass
+    top_recipes = sorted(pop.items(), key=lambda x: x[1], reverse=True)[:8]
+
+    chart_data = {
+        'days_labels': days_labels,
+        'day_records': day_records,
+        'day_chats': day_chats,
+        'recipe_cat': recipe_cat_data,
+        'ingredient_cat': ingredient_cat_data,
+        'top_recipes': [{'name': n, 'value': c} for n, c in top_recipes]
+    }
+
     return render_template('admin/dashboard.html', stats=stats,
-                           recent_records=recent_records, recent_users=recent_users)
+                           recent_records=recent_records, recent_users=recent_users,
+                           chart_data=chart_data)
 
 
 @app.route('/admin/users')

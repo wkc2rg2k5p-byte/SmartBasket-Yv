@@ -1,5 +1,5 @@
 /**
- * HomeEat 公共JS工具
+ * HomeEat 公共JS工具 V3
  */
 
 // 文件上传
@@ -14,32 +14,108 @@ function uploadFile(inputId, callback) {
         .then(data => {
             if (data.code === 0) {
                 callback(data.data.url);
+                showToast('上传成功', 'success');
             } else {
-                alert(data.msg);
+                showToast(data.msg || '上传失败', 'error');
             }
         })
-        .catch(err => alert('上传失败: ' + err));
+        .catch(err => showToast('上传失败: ' + err, 'error'));
 }
 
 // 打开/关闭模态框
 function openModal(id) {
-    document.getElementById(id).classList.add('show');
+    const el = document.getElementById(id);
+    if (el) {
+        el.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
 }
 function closeModal(id) {
-    document.getElementById(id).classList.remove('show');
+    const el = document.getElementById(id);
+    if (el) {
+        el.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+}
+
+// 点击遮罩关闭模态框
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal-overlay') && e.target.classList.contains('show')) {
+        e.target.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+});
+
+// ESC 键关闭模态框
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.show').forEach(function(m) {
+            m.classList.remove('show');
+        });
+        document.body.style.overflow = '';
+    }
+});
+
+// Toast 消息提示
+function showToast(message, type) {
+    type = type || 'info';
+    const toast = document.createElement('div');
+    toast.className = 'toast-msg toast-' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(function() { toast.classList.add('toast-show'); });
+    setTimeout(function() {
+        toast.classList.remove('toast-show');
+        setTimeout(function() { toast.remove(); }, 300);
+    }, 3000);
 }
 
 // 消息提示自动关闭
 document.addEventListener('DOMContentLoaded', function() {
     const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(alert => {
-        setTimeout(() => {
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
             alert.style.opacity = '0';
             alert.style.transform = 'translateY(-10px)';
-            setTimeout(() => alert.remove(), 300);
-        }, 3000);
+            setTimeout(function() { alert.remove(); }, 300);
+        }, 4000);
+    });
+
+    // 统计数字动画
+    document.querySelectorAll('.stat-number').forEach(function(el) {
+        const text = el.textContent.trim();
+        const num = parseInt(text);
+        if (!isNaN(num) && num > 0 && num < 100000) {
+            el.textContent = '0';
+            animateCounter(el, 0, num, 600);
+        }
+    });
+
+    // 表格行渐入动画
+    document.querySelectorAll('.data-table tbody tr').forEach(function(row, i) {
+        row.style.opacity = '0';
+        row.style.transform = 'translateY(8px)';
+        row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        setTimeout(function() {
+            row.style.opacity = '1';
+            row.style.transform = 'translateY(0)';
+        }, 40 * i);
     });
 });
+
+// 数字递增动画
+function animateCounter(el, start, end, duration) {
+    const range = end - start;
+    const startTime = performance.now();
+    function step(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.floor(start + range * eased);
+        if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
 
 // 确认删除
 function confirmDelete(url, name) {

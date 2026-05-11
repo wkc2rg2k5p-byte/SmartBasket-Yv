@@ -14,4 +14,4 @@ class Config:
     # AI API Configuration (可配置真实API)
     AI_API_KEY = os.environ.get('AI_API_KEY', 'ak_1Kh8jA3OR92y8ng5ii4hc4WF83D2d')
     AI_API_URL = os.environ.get('AI_API_URL', 'https://api.longcat.chat/openai/v1/chat/completions')
-    AI_MODEL = os.environ.get('AI_MODEL', 'LongCat-Flash-Chat')
+    AI_MODEL = os.environ.get('AI_MODEL', 'LongCat-Flash-Lite')

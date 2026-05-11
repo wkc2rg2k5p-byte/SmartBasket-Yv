@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeEat - 家庭饮食管理协同系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- 主导航 -->
+<header class="corp-header">
+    <div class="corp-header-inner">
+        <a href="/" class="corp-logo">
+            <span class="cl-mark">🍽️</span>
+            <span class="cl-text">
+                <span class="cl-name">HomeEat</span>
+                <span class="cl-tag">Family Diet Platform</span>
+            </span>
+        </a>
+        <div class="corp-header-cta">
+            {% if current_user.is_authenticated %}
+            <a href="/user/home" class="corp-btn-header">进入系统</a>
+            {% else %}
+            <a href="/login" class="corp-btn-header-ghost">登录</a>
+            <a href="/register" class="corp-btn-header">免费注册</a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<!-- Hero Banner -->
+<section class="corp-hero" id="home">
+    <div class="corp-hero-inner">
+        <div class="corp-hero-left">
+            <div class="hero-label">◆ AI-POWERED FAMILY DIET MANAGEMENT</div>
+            <h1 class="corp-hero-title">
+                智能家庭 <span class="highlight-box">AI&nbsp;营养</span><br>
+                饮食管理协同平台
+            </h1>
+            <div class="corp-hero-subtitle">SMART RECOMMENDATION · FAMILY COLLABORATION · HEALTH ANALYSIS</div>
+            <p class="corp-hero-desc">
+                HomeEat 致力于为中国家庭提供智能化、专业化的饮食健康管理服务。融合 AI 大模型、家庭协同、营养数据分析��核心能力，为家庭用户打造一站式饮食健康管理解决方案。<br>
+                健康档案·智能点菜·采购清单·健康周报 全链路覆盖
+            </p>
+            <div class="corp-hero-cta">
+                {% if current_user.is_authenticated %}
+                <a href="/user/home" class="btn-primary-corp">进入工作台 →</a>
+                {% else %}
+                <a href="/register" class="btn-primary-corp">免费注册 →</a>
+                <a href="/login" class="btn-secondary-corp">立即登录</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="corp-hero-right">
+            <div class="corp-hero-feature-card">
+                <div class="hfc-item"><div class="hfc-icon">🤖</div><div class="hfc-label">AI 模型</div><div class="hfc-value">DeepSeek</div></div>
+                <div class="hfc-item"><div class="hfc-icon">👨‍👩‍👧</div><div class="hfc-label">协作家庭</div><div class="hfc-value">5,000+</div></div>
+                <div class="hfc-item"><div class="hfc-icon">🍳</div><div class="hfc-label">菜谱库</div><div class="hfc-value">1,000+</div></div>
+                <div class="hfc-item"><div class="hfc-icon">⚡</div><div class="hfc-label">响应速度</div><div class="hfc-value">< 2 秒</div></div>
+            </div>
+        </div>
+    </div>
+    <div class="corp-hero-metrics">
+        <div class="hm-cell"><div class="hm-cell-num">10+</div><div class="hm-cell-label">YEARS EXPERIENCE</div></div>
+        <div class="hm-cell"><div class="hm-cell-num">5000+</div><div class="hm-cell-label">FAMILIES SERVED</div></div>
+        <div class="hm-cell"><div class="hm-cell-num">1000+</div><div class="hm-cell-label">RECIPES IN LIBRARY</div></div>
+        <div class="hm-cell"><div class="hm-cell-num">99.9%</div><div class="hm-cell-label">SERVICE AVAILABILITY</div></div>
+    </div>
+</section>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>

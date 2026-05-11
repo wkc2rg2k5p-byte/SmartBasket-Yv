@@ -4,22 +4,48 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 {% endblock %}
 {% block content %}
-<div class="page-header">
-    <h2>🍳 智能点菜 - {{ family.name }}</h2>
-    <div>
-        <select id="mealType" class="form-control" style="display:inline-block;width:auto;margin-right:8px;">
-            <option value="breakfast">早餐</option>
-            <option value="lunch">午餐</option>
-            <option value="dinner" selected>晚餐</option>
-        </select>
-        <button class="btn btn-success" onclick="generateRecipe()" id="genBtn">🤖 AI生成菜谱</button>
+<div class="page-header-v4">
+    <div class="ph-left">
+        <div class="ph-crumb"><a href="/user/home">工作台</a><span class="sep">/</span><span>智能点菜</span></div>
+        <h1>AI 智能点菜 · {{ family.name }}
+            {% if active_session %}<span class="ph-badge"><span class="dot"></span>会话进行中</span>{% else %}<span class="ph-badge" style="background:var(--cream-dark);color:var(--text-muted);"><span class="dot" style="background:var(--text-light);animation:none;"></span>未开始</span>{% endif %}
+        </h1>
+        <p class="ph-desc">家庭成员实时聊天讨论想吃什么，结束会话后 AI 会综合大家的健康档案与口味偏好智能生成菜谱。</p>
+    </div>
+    <div class="ph-actions">
+        {% if not active_session %}
+        <button class="btn btn-primary btn-lg" onclick="startSession()" id="startBtn">🍽️ 开始点菜</button>
+        {% else %}
+        <button class="btn btn-success btn-lg" onclick="endSession()" id="endBtn">🤖 结束点菜 · AI 生成菜谱</button>
+        {% endif %}
     </div>
 </div>
 
-<div class="chat-container" style="height: calc(100vh - 240px);">
-    <!-- 聊天主区域 -->
+<div class="chat-container" style="height: calc(100vh - 280px);">
     <div class="chat-main">
+        {% if not active_session %}
         <div class="chat-messages" id="chatMessages">
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;">
+                <div style="text-align:center;max-width:420px;padding:40px 24px;">
+                    <div style="width:100px;height:100px;margin:0 auto 20px;border-radius:24px;background:linear-gradient(135deg,var(--cream),var(--cream-dark));display:flex;align-items:center;justify-content:center;font-size:48px;border:1px solid var(--border);">🍽️</div>
+                    <h3 style="color:var(--text-dark);margin-bottom:10px;font-size:18px;font-weight:700;">开启新一轮家庭点菜</h3>
+                    <p style="color:var(--text-muted);font-size:13px;line-height:1.8;margin-bottom:20px;">点击上方"开始点菜"按钮，家庭成员可通过聊天讨论想吃什么。<br>讨论完成后 AI 会：</p>
+                    <div style="display:flex;flex-direction:column;gap:8px;text-align:left;padding:14px 18px;background:var(--cream);border-radius:var(--radius-sm);border:1px solid var(--border-light);">
+                        <div style="font-size:12px;color:var(--text-body);">✓ 综合分析家庭成员健康档案</div>
+                        <div style="font-size:12px;color:var(--text-body);">✓ 避免过敏食材、尊重忌口</div>
+                        <div style="font-size:12px;color:var(--text-body);">✓ 推荐 3-4 道搭配合理的菜品</div>
+                        <div style="font-size:12px;color:var(--text-body);">✓ 确认后自动生成采购清单</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="chat-input" style="opacity:0.5;pointer-events:none;">
+            <input type="text" id="msgInput" placeholder="请先点击上方的开始点菜按钮..." disabled>
+            <button class="btn btn-primary" disabled>发送</button>
+        </div>
+        {% else %}
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-msg system"><div class="msg-content"><div class="msg-bubble">🍽️ 点菜会话已开始 · 大家说说今天想吃什么吧</div></div></div>
             {% for msg in messages %}
             <div class="chat-msg {% if msg.user_id == current_user.id %}self{% endif %} {% if msg.msg_type == 'recipe' or msg.msg_type == 'system' %}system{% endif %}">
                 {% if msg.msg_type != 'system' and msg.msg_type != 'recipe' %}
@@ -27,10 +53,7 @@
                 {% endif %}
                 <div class="msg-content">
                     {% if msg.msg_type != 'system' and msg.msg_type != 'recipe' %}
-                    <div class="msg-header">
-                        <span class="nickname">{{ msg.user.nickname }}</span>
-                        <span>{{ msg.created_at.strftime('%H:%M') }}</span>
-                    </div>
+                    <div class="msg-header"><span class="nickname">{{ msg.user.nickname }}</span><span>{{ msg.created_at.strftime('%H:%M') }}</span></div>
                     {% endif %}
                     <div class="msg-bubble">{{ msg.message }}</div>
                 </div>
@@ -38,47 +61,64 @@
             {% endfor %}
         </div>
         <div class="chat-input">
-            <input type="text" id="msgInput" placeholder="输入你想吃的菜，如：今晚想吃辣的..." onkeypress="if(event.keyCode==13)sendMsg()">
-            <button class="btn btn-primary" onclick="sendMsg()">发送</button>
+            <input type="text" id="msgInput" placeholder="输入你想吃的菜，例如：今晚想吃辣的 / 多点蔬菜 / 不要太油腻..." onkeypress="if(event.keyCode==13)sendMsg()">
+            <button class="btn btn-primary" onclick="sendMsg()">📨 发送</button>
         </div>
+        {% endif %}
     </div>
 
-    <!-- 侧边栏 -->
     <div class="chat-sidebar">
-        <!-- 在线成员 -->
-        <div class="card" style="margin-bottom:0;">
-            <div class="card-header"><h3>👥 家庭成员</h3></div>
-            {% for member in members %}
-            <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
-                <img src="{{ member.avatar or 'https://via.placeholder.com/32' }}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-                <div>
-                    <div style="font-size:13px;font-weight:500;">{{ member.nickname }}</div>
-                    <div style="font-size:11px;color:var(--text-muted);">
-                        {% if member.allergies %}⚠️{{ member.allergies }}{% endif %}
-                        {% if member.taste_likes %}❤️{{ member.taste_likes }}{% endif %}
+        <div class="panel" style="margin-bottom:0;">
+            <div class="panel-head" style="padding:14px 18px;">
+                <div class="panel-title"><div class="panel-icon">👥</div><h3>参与成员</h3></div>
+                <span class="chip chip-success"><span class="chip-dot"></span>{{ members|length }} 在线</span>
+            </div>
+            <div class="panel-body" style="padding:6px 14px;">
+                {% for member in members %}
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border-light);">
+                    <div style="position:relative;">
+                        <img src="{{ member.avatar or 'https://via.placeholder.com/36' }}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border);">
+                        <span style="position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;background:var(--success);border:2px solid white;border-radius:50%;"></span>
+                    </div>
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:13px;font-weight:600;color:var(--text-dark);">{{ member.nickname }}{% if member.is_family_admin %} <span style="font-size:10px;color:var(--gold-dark);">👑</span>{% endif %}</div>
+                        <div style="font-size:10.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                            {% if member.allergies %}⚠️ {{ member.allergies }}{% elif member.taste_likes %}❤️ {{ member.taste_likes }}{% else %}在线中{% endif %}
+                        </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
 
-        <!-- 生成结果 -->
-        <div class="card" id="resultCard" style="display:none;margin-bottom:0;">
-            <div class="card-header"><h3>🍽️ 推荐菜谱</h3></div>
-            <div id="resultContent"></div>
+        {% if active_session %}
+        <div class="panel" style="margin-bottom:0;background:linear-gradient(135deg,rgba(139,94,60,.06),rgba(200,169,126,.04));border-color:rgba(139,94,60,.2);">
+            <div class="panel-body" style="padding:14px 16px;">
+                <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--coffee-600);margin-bottom:6px;">💡 小贴士</div>
+                <div style="font-size:11.5px;color:var(--text-muted);line-height:1.7;">多描述口味、心情、想吃什么类型，AI 推荐会更贴心。结束会话后将弹出菜谱推荐。</div>
+            </div>
         </div>
+        {% endif %}
+    </div>
+</div>
 
-        <!-- 冲突提示 -->
-        <div class="card" id="conflictCard" style="display:none;margin-bottom:0;">
-            <div class="card-header"><h3>⚠️ 忌口提醒</h3></div>
-            <div id="conflictContent"></div>
+<!-- AI 推荐菜谱弹窗 -->
+<div id="aiResultModal" class="modal-overlay">
+    <div class="modal" style="max-width:600px;width:90vw;">
+        <h3 style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">🤖 AI 推荐菜谱</h3>
+        <div id="aiResultContent" style="max-height:50vh;overflow-y:auto;"></div>
+        <div id="aiConflicts" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(201,75,75,.06);border:1px solid rgba(201,75,75,.2);border-radius:8px;"></div>
+        <div class="modal-actions" style="margin-top:20px;display:flex;gap:10px;">
+            <button class="btn btn-outline" onclick="closeModal('aiResultModal')">取消</button>
+            <button class="btn btn-primary" id="confirmOrderBtn" onclick="confirmOrder()" style="flex:1;padding:12px;font-size:15px;font-weight:700;">✅ 确认点餐 · 生成采购清单</button>
         </div>
     </div>
 </div>
 
+<!-- 单道菜详情弹窗 -->
 <div id="recipeModal" class="modal-overlay">
     <div class="modal">
-        <h3>🍽️ 生成的菜谱详情</h3>
+        <h3>🍽️ 菜品详情</h3>
         <div id="recipeDetail"></div>
         <div class="modal-actions">
             <button class="btn btn-outline" onclick="closeModal('recipeModal')">关闭</button>
@@ -91,113 +131,121 @@
 <script>
 const familyId = {{ family.id }};
 const currentUserId = {{ current_user.id }};
+let hasActiveSession = {{ 'true' if active_session else 'false' }};
 const socket = io();
-
 socket.emit('join', {family_id: familyId});
-
-socket.on('new_message', function(data) {
-    addMessage(data);
-});
-
+socket.on('new_message', function(data) { addMessage(data); });
 socket.on('status', function(data) {
     const div = document.createElement('div');
     div.className = 'chat-msg system';
     div.innerHTML = '<div class="msg-content"><div class="msg-bubble">' + data.msg + '</div></div>';
-    document.getElementById('chatMessages').appendChild(div);
-    scrollToBottom();
+    const chatEl = document.getElementById('chatMessages');
+    if (chatEl) { chatEl.appendChild(div); scrollToBottom(); }
 });
+socket.on('session_started', function(data) { location.reload(); });
+socket.on('session_ended', function(data) { });
 
+function startSession() {
+    const btn = document.getElementById('startBtn');
+    btn.disabled = true; btn.textContent = '⏳ 开始中...';
+    fetch('/api/session/start', { method: 'POST', headers: {'Content-Type': 'application/json'} })
+    .then(r => r.json()).then(data => {
+        if (data.code === 0) { location.reload(); } else { alert(data.msg); btn.disabled = false; btn.textContent = '🍽️ 开始点菜'; }
+    }).catch(err => { alert('操作失败: ' + err); btn.disabled = false; btn.textContent = '🍽️ 开始点菜'; });
+}
+function endSession() {
+    if (!confirm('确定要结束点菜并让AI生成菜谱吗？')) return;
+    const btn = document.getElementById('endBtn');
+    btn.disabled = true; btn.textContent = '⏳ AI分析中，请稍候...';
+    fetch('/api/session/end', { method: 'POST', headers: {'Content-Type': 'application/json'} })
+    .then(r => r.json()).then(data => {
+        btn.disabled = false; btn.textContent = '🤖 结束点菜，AI生成菜谱';
+        if (data.code === 0) {
+            showAIResultModal(data.data);
+            const input = document.getElementById('msgInput');
+            if (input) { input.disabled = true; input.placeholder = '本次点菜已结束'; }
+            btn.textContent = '✅ 菜谱已生成'; btn.disabled = true;
+        } else { alert(data.msg); }
+    }).catch(err => { btn.disabled = false; btn.textContent = '🤖 结束点菜，AI生成菜谱'; alert('生成失败: ' + err); });
+}
 function sendMsg() {
     const input = document.getElementById('msgInput');
-    const msg = input.value.trim();
-    if (!msg) return;
-    socket.emit('send_message', {family_id: familyId, message: msg});
-    input.value = '';
+    const msg = input.value.trim(); if (!msg) return;
+    socket.emit('send_message', {family_id: familyId, message: msg}); input.value = '';
 }
-
 function addMessage(data) {
-    const container = document.getElementById('chatMessages');
+    const container = document.getElementById('chatMessages'); if (!container) return;
     const isSelf = data.user_id === currentUserId;
     const isSystem = data.msg_type === 'recipe' || data.msg_type === 'system';
     let html = '<div class="chat-msg ' + (isSelf ? 'self' : '') + ' ' + (isSystem ? 'system' : '') + '">';
-    if (!isSystem) {
-        html += '<img src="' + (data.avatar || 'https://via.placeholder.com/36') + '" class="avatar">';
-    }
+    if (!isSystem) html += '<img src="' + (data.avatar || 'https://via.placeholder.com/36') + '" class="avatar">';
     html += '<div class="msg-content">';
-    if (!isSystem) {
-        html += '<div class="msg-header"><span class="nickname">' + data.nickname + '</span><span>' + data.time + '</span></div>';
-    }
+    if (!isSystem) html += '<div class="msg-header"><span class="nickname">' + data.nickname + '</span><span>' + data.time + '</span></div>';
     html += '<div class="msg-bubble">' + data.message + '</div></div></div>';
-    container.innerHTML += html;
-    scrollToBottom();
+    container.innerHTML += html; scrollToBottom();
+}
+function scrollToBottom() { const el = document.getElementById('chatMessages'); if (el) el.scrollTop = el.scrollHeight; }
+
+const defaultFoodIcons = {'荤菜':'🥩','素菜':'🥬','汤类':'🍲','主食':'🍚','凉菜':'🥗','家常菜':'🍳','海鲜':'🦐'};
+function getFoodImg(r, size) {
+    size = size || 56;
+    if (r.image && r.image.length > 5) return '<img src="' + r.image + '" style="width:'+size+'px;height:'+size+'px;border-radius:10px;object-fit:cover;background:var(--cream);flex-shrink:0;">';
+    const icon = defaultFoodIcons[r.category] || '🍽️';
+    return '<div style="width:'+size+'px;height:'+size+'px;border-radius:10px;background:linear-gradient(135deg,var(--cream),var(--cream-dark));display:flex;align-items:center;justify-content:center;font-size:'+(size*0.5)+'px;flex-shrink:0;">' + icon + '</div>';
 }
 
-function scrollToBottom() {
-    const el = document.getElementById('chatMessages');
-    el.scrollTop = el.scrollHeight;
-}
-
-function generateRecipe() {
-    const btn = document.getElementById('genBtn');
-    btn.disabled = true;
-    btn.textContent = '⏳ 生成中...';
-    const mealType = document.getElementById('mealType').value;
-
-    fetch('/api/generate_recipe', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({meal_type: mealType})
-    })
-    .then(r => r.json())
-    .then(data => {
-        btn.disabled = false;
-        btn.textContent = '🤖 AI生成菜谱';
-        if (data.code === 0) {
-            showResult(data.data);
-        } else {
-            alert(data.msg);
-        }
-    })
-    .catch(err => {
-        btn.disabled = false;
-        btn.textContent = '🤖 AI生成菜谱';
-        alert('生成失败: ' + err);
-    });
-}
-
-function showResult(data) {
-    const resultCard = document.getElementById('resultCard');
-    resultCard.style.display = 'block';
+/* 弹窗显示 AI 推荐菜谱 */
+function showAIResultModal(data) {
     let html = '';
-    data.recipes.forEach(function(r) {
-        html += '<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="showRecipeDetail(' + JSON.stringify(r).replace(/"/g, '&quot;') + ')">';
-        html += '<img src="' + (r.image || '') + '" style="width:50px;height:50px;border-radius:8px;object-fit:cover;">';
-        html += '<div><div style="font-weight:500;font-size:13px;">' + r.name + '</div>';
-        html += '<div style="font-size:11px;color:var(--text-muted);">' + r.category + ' · ' + r.taste + ' · ' + r.calories + '千卡</div></div></div>';
+    data.recipes.forEach(function(r, i) {
+        html += '<div style="display:flex;gap:14px;padding:14px 0;' + (i > 0 ? 'border-top:1px solid var(--border-light);' : '') + 'align-items:center;cursor:pointer;" onclick="showRecipeDetail(' + JSON.stringify(r).replace(/"/g, '&quot;') + ')">';
+        html += getFoodImg(r, 60);
+        html += '<div style="min-width:0;flex:1;">';
+        html += '<div style="font-weight:700;font-size:15px;color:var(--text-dark);margin-bottom:4px;">' + r.name + '</div>';
+        html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">' + (r.category||'') + ' · ' + (r.taste||'') + ' · ' + (r.difficulty||'中等') + ' · ' + (r.cook_time||30) + '分钟</div>';
+        html += '<div style="display:flex;gap:12px;font-size:11px;color:var(--text-body);">';
+        html += '<span>🔥 ' + r.calories + '千卡</span>';
+        html += '<span>蛋白 ' + r.protein + 'g</span>';
+        html += '<span>脂肪 ' + r.fat + 'g</span>';
+        html += '</div></div></div>';
     });
-    document.getElementById('resultContent').innerHTML = html;
+    document.getElementById('aiResultContent').innerHTML = html;
 
     if (data.conflicts && data.conflicts.length > 0) {
-        document.getElementById('conflictCard').style.display = 'block';
-        document.getElementById('conflictContent').innerHTML = data.conflicts.map(c => '<p style="font-size:13px;color:var(--danger);padding:4px 0;">' + c + '</p>').join('');
+        const conflictEl = document.getElementById('aiConflicts');
+        conflictEl.style.display = 'block';
+        conflictEl.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:6px;">⚠️ 忌口提醒</div>' +
+            data.conflicts.map(c => '<div style="font-size:12px;color:var(--danger);padding:2px 0;">' + c + '</div>').join('');
     }
-    scrollToBottom();
+
+    openModal('aiResultModal');
+}
+
+function confirmOrder() {
+    const btn = document.getElementById('confirmOrderBtn');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ 正在跳转到采购清单...';
+    setTimeout(function() { location.href = '/user/shopping'; }, 800);
 }
 
 function showRecipeDetail(r) {
     let html = '<div style="margin-bottom:16px;">';
-    html += '<img src="' + (r.image || '') + '" style="width:100%;height:200px;object-fit:cover;border-radius:8px;">';
+    if (r.image && r.image.length > 5) {
+        html += '<img src="' + r.image + '" style="width:100%;height:200px;object-fit:cover;border-radius:8px;background:var(--cream);">';
+    } else {
+        const icon = defaultFoodIcons[r.category] || '🍽️';
+        html += '<div style="width:100%;height:160px;border-radius:8px;background:linear-gradient(135deg,var(--cream),var(--cream-dark));display:flex;align-items:center;justify-content:center;font-size:64px;">' + icon + '</div>';
+    }
     html += '<h4 style="margin-top:12px;">' + r.name + '</h4>';
-    html += '<div class="d-flex gap-1 flex-wrap mt-1"><span class="badge badge-info">' + r.category + '</span><span class="badge badge-primary">' + r.taste + '</span><span class="badge badge-warning">' + r.difficulty + '</span><span class="badge badge-success">' + r.cook_time + '分钟</span></div>';
-    html += '<div class="mt-2" style="padding:12px;background:var(--primary-bg);border-radius:8px;">';
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><span class="chip chip-neutral">' + (r.category||'') + '</span><span class="chip chip-neutral">' + (r.taste||'') + '</span><span class="chip chip-neutral">' + (r.difficulty||'') + '</span><span class="chip chip-neutral">' + r.cook_time + '分钟</span></div>';
+    html += '<div style="margin-top:12px;padding:12px;background:var(--cream);border-radius:8px;">';
     html += '<p style="font-size:13px;">🔥 热量: ' + r.calories + '千卡 | 蛋白: ' + r.protein + 'g | 脂肪: ' + r.fat + 'g | 碳水: ' + r.carbs + 'g</p></div>';
     html += '<h4 style="margin-top:16px;">🥕 食材清单</h4><ul style="padding-left:20px;margin-top:8px;">';
-    r.ingredients.forEach(function(ing) { html += '<li style="font-size:13px;margin-bottom:4px;">' + ing.name + ' ' + ing.amount + '</li>'; });
-    html += '</ul><h4 style="margin-top:16px;">📝 做法步骤</h4><pre style="font-size:13px;margin-top:8px;white-space:pre-wrap;line-height:1.8;">' + r.steps + '</pre></div>';
+    if (r.ingredients) r.ingredients.forEach(function(ing) { html += '<li style="font-size:13px;margin-bottom:4px;">' + ing.name + ' ' + ing.amount + '</li>'; });
+    html += '</ul><h4 style="margin-top:16px;">📝 做法步骤</h4><pre style="font-size:13px;margin-top:8px;white-space:pre-wrap;line-height:1.8;">' + (r.steps||'') + '</pre></div>';
     document.getElementById('recipeDetail').innerHTML = html;
     openModal('recipeModal');
 }
-
 scrollToBottom();
 </script>
 {% endblock %}

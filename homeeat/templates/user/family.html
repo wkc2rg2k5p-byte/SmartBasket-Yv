@@ -1,87 +1,114 @@
 {% extends "user/base.html" %}
 {% block title %}家庭管理{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h2>👨‍👩‍👧‍👦 家庭管理</h2>
-    <span class="breadcrumb">首页 / 家庭管理</span>
+<div class="page-header-v4">
+    <div class="ph-left">
+        <div class="ph-crumb"><a href="/user/home">工作台</a><span class="sep">/</span><span>家庭管理</span></div>
+        <h1>家庭协作管理 {% if family %}<span class="ph-badge"><span class="dot"></span>已加入</span>{% endif %}</h1>
+        <p class="ph-desc">以家庭为单位协作管理饮食健康：邀请成员、共享菜单、协同点菜、分享健康数据。</p>
+    </div>
+    {% if family and current_user.is_family_admin %}
+    <div class="ph-actions">
+        <button class="btn btn-outline" onclick="navigator.clipboard.writeText('{{ family.invite_code }}').then(()=>showToast('邀请码已复制','success'))">📋 复制邀请码</button>
+        <button class="btn btn-danger" onclick="if(confirm('确定离开家庭吗？'))location.href='/user/family/leave'">🚪 离开家庭</button>
+    </div>
+    {% endif %}
 </div>
 
 {% if family %}
-<!-- 家庭信息 -->
-<div class="card">
-    <div class="card-header">
-        <h3>🏠 {{ family.name }}</h3>
-        <div class="d-flex gap-1">
-            <span class="badge badge-primary" style="font-size:14px;">邀请码: {{ family.invite_code }}</span>
-            {% if current_user.is_family_admin %}
-            <button class="btn btn-danger btn-sm" onclick="if(confirm('确定离开家庭吗？'))location.href='/user/family/leave'">离开家庭</button>
-            {% endif %}
+<div class="hero-banner">
+    <div class="hero-head">
+        <div style="display:flex;align-items:center;gap:20px;">
+            <div style="width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,rgba(200,169,126,.35),rgba(139,94,60,.25));display:flex;align-items:center;justify-content:center;font-size:38px;border:1px solid rgba(255,255,255,.1);">🏠</div>
+            <div>
+                <div class="hero-tag"><span class="dot"></span>{{ members|length }} 位成员协作中</div>
+                <h1 class="hero-title" style="margin-bottom:8px;">{{ family.name }}</h1>
+                <p class="hero-subtitle" style="max-width:560px;">{{ family.description or '这是一个温馨的家庭，让我们一起管理健康饮食。' }}</p>
+            </div>
         </div>
     </div>
-    <p class="text-muted mb-2">{{ family.description or '暂无描述' }}</p>
-    <p class="text-muted" style="font-size:13px;">创建时间: {{ family.created_at.strftime('%Y-%m-%d') if family.created_at else 'N/A' }}</p>
+    <div class="hero-metrics">
+        <div class="hero-metric"><div class="hm-label">家庭成员</div><div class="hm-value">{{ members|length }} <small style="font-size:13px;color:rgba(255,255,255,.55);font-weight:500;">人</small></div><div class="hm-delta">{% if current_user.is_family_admin %}👑 您是家庭管理员{% else %}普通成员{% endif %}</div></div>
+        <div class="hero-metric"><div class="hm-label">邀请码</div><div class="hm-value" style="font-family:'Courier New',monospace;letter-spacing:2px;">{{ family.invite_code }}</div><div class="hm-delta">分享给家人使用</div></div>
+        <div class="hero-metric"><div class="hm-label">创建时间</div><div class="hm-value" style="font-size:18px;">{{ family.created_at.strftime('%Y-%m-%d') if family.created_at else '—' }}</div><div class="hm-delta">协作从此开始</div></div>
+        <div class="hero-metric"><div class="hm-label">角色身份</div><div class="hm-value" style="font-size:18px;">{% if current_user.is_family_admin %}👑 管理员{% else %}🏠 成员{% endif %}</div><div class="hm-delta">{% if current_user.is_family_admin %}可管理所有成员{% else %}参与家庭协作{% endif %}</div></div>
+    </div>
 </div>
 
-<!-- 家庭成员列表 -->
-<div class="card">
-    <div class="card-header">
-        <h3>👥 家庭成员 ({{ members|length }}人)</h3>
+<div class="panel">
+    <div class="panel-head">
+        <div class="panel-title"><div class="panel-icon">👥</div><h3>家庭成员</h3><span class="panel-sub">共 {{ members|length }} 位成员</span></div>
+        <div class="panel-actions"><span class="chip chip-primary">邀请码 {{ family.invite_code }}</span></div>
     </div>
-    <div class="member-grid">
-        {% for member in members %}
-        <div class="member-card">
-            <img src="{{ member.avatar or 'https://via.placeholder.com/60' }}" alt="{{ member.nickname }}">
-            <h4>{{ member.nickname or member.username }}</h4>
-            <p class="text-muted" style="font-size:12px;">{{ member.gender }} {% if member.age %}· {{ member.age }}岁{% endif %}</p>
-            <span class="role-badge">{% if member.is_family_admin %}👑 管理员{% else %}成员{% endif %}</span>
-            {% if member.allergies %}<p style="font-size:11px;color:var(--danger);margin-top:4px;">⚠️ {{ member.allergies }}</p>{% endif %}
-            {% if member.taste_likes %}<p style="font-size:11px;color:var(--text-muted);margin-top:4px;">❤️ {{ member.taste_likes }}</p>{% endif %}
-            {% if member.taste_dislikes %}<p style="font-size:11px;color:var(--text-muted);margin-top:2px;">🚫 {{ member.taste_dislikes }}</p>{% endif %}
-            {% if current_user.is_family_admin and member.id != current_user.id %}
-            <div class="mt-1">
-                <button class="btn btn-danger btn-sm" onclick="confirmDelete('/user/family/remove/{{ member.id }}', '{{ member.nickname }}')">移除</button>
+    <div class="panel-body">
+        <div class="member-grid">
+            {% for member in members %}
+            <div class="member-card">
+                <img src="{{ member.avatar or 'https://via.placeholder.com/60' }}" alt="{{ member.nickname }}">
+                <h4>{{ member.nickname or member.username }}</h4>
+                <p class="text-muted" style="font-size:12px;">{{ member.gender or '未填写' }}{% if member.age %} · {{ member.age }}岁{% endif %}{% if member.height and member.weight %} · {{ member.height }}/{{ member.weight }}{% endif %}</p>
+                <span class="role-badge">{% if member.is_family_admin %}👑 管理���{% else %}家庭成员{% endif %}</span>
+                {% if member.allergies or member.taste_likes or member.taste_dislikes %}
+                <div class="tag-list" style="margin-top:10px;justify-content:center;">
+                    {% if member.allergies %}<span class="t-item t-danger" title="过敏原">⚠️ {{ member.allergies }}</span>{% endif %}
+                    {% if member.taste_likes %}<span class="t-item t-olive" title="喜欢">❤️ {{ member.taste_likes }}</span>{% endif %}
+                    {% if member.taste_dislikes %}<span class="t-item" title="忌口">🚫 {{ member.taste_dislikes }}</span>{% endif %}
+                </div>
+                {% endif %}
+                {% if current_user.is_family_admin and member.id != current_user.id %}
+                <div class="mt-2" style="padding-top:10px;border-top:1px dashed var(--border-light);">
+                    <button class="btn btn-outline btn-sm" onclick="confirmDelete('/user/family/remove/{{ member.id }}', '{{ member.nickname }}')">移除成员</button>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
 </div>
+
+<div class="section-head"><div class="sh-left"><h3>开始家庭协作</h3><span class="sh-sub">基于当前家庭的快捷操作</span></div></div>
+<div class="quick-actions">
+    <a href="/user/ordering" class="qa-card"><div class="qa-icon" style="background:linear-gradient(135deg,var(--coffee-500),var(--gold-dark));">🍳</div><div><div class="qa-title">开启家庭点菜</div><div class="qa-desc">全家一起讨论，AI 智能推荐菜谱</div></div><span class="qa-arrow">→</span></a>
+    <a href="/user/report" class="qa-card"><div class="qa-icon" style="background:linear-gradient(135deg,var(--success),#3d7a4e);">📊</div><div><div class="qa-title">生成健康周报</div><div class="qa-desc">家庭营养数据可视化分析</div></div><span class="qa-arrow">→</span></a>
+    <a href="/user/history" class="qa-card"><div class="qa-icon" style="background:linear-gradient(135deg,var(--info),#3a6b80);">📅</div><div><div class="qa-title">查看历史菜单</div><div class="qa-desc">一键复用曾经喜爱的菜单</div></div><span class="qa-arrow">→</span></a>
+</div>
+
 {% else %}
-<!-- 未加入家庭 -->
+<div class="panel" style="padding:0;background:linear-gradient(135deg,rgba(139,94,60,.04),rgba(200,169,126,.03));border:1px dashed var(--border);">
+    <div class="panel-body" style="padding:40px 32px;text-align:center;">
+        <div style="font-size:42px;margin-bottom:16px;">🏡</div>
+        <h2 style="font-size:22px;color:var(--text-dark);margin-bottom:8px;font-weight:700;">开启您的家庭协作之旅</h2>
+        <p style="font-size:14px;color:var(--text-muted);max-width:520px;margin:0 auto 24px;line-height:1.7;">创建新家庭以邀请家人协作，或使用邀请码加入已有家庭。</p>
+    </div>
+</div>
+
 <div class="grid-2">
-    <div class="card">
-        <div class="card-header"><h3>🏠 创建家庭</h3></div>
-        <form method="POST" action="/user/family/create">
-            <div class="form-group">
-                <label>家庭名称</label>
-                <input type="text" name="name" class="form-control" placeholder="例：温馨之家" required>
-            </div>
-            <div class="form-group">
-                <label>家庭描述</label>
-                <textarea name="description" class="form-control" placeholder="简单介绍您的家庭"></textarea>
-            </div>
-            <div class="form-group">
-                <label>家庭头像URL（选填）</label>
-                <div class="d-flex gap-1">
-                    <input type="hidden" name="avatar" id="familyAvatar">
-                    <input type="file" id="familyAvatarFile" class="form-control" accept="image/*" onchange="uploadFile('familyAvatarFile', function(url){document.getElementById('familyAvatar').value=url;})">
+    <div class="panel">
+        <div class="panel-head"><div class="panel-title"><div class="panel-icon">🏠</div><h3>创建新家庭</h3><span class="panel-sub">您将成为管理员</span></div></div>
+        <div class="panel-body">
+            <form method="POST" action="/user/family/create">
+                <div class="form-group"><label>家庭名称 <span style="color:var(--danger);">*</span></label><input type="text" name="name" class="form-control" placeholder="例：温馨之家、陈家小窝" required></div>
+                <div class="form-group"><label>家庭描述</label><textarea name="description" class="form-control" rows="3" placeholder="一句话介绍您的家庭..."></textarea></div>
+                <div class="form-group"><label>家庭头像（选填）</label><input type="hidden" name="avatar" id="familyAvatar"><input type="file" id="familyAvatarFile" class="form-control" accept="image/*" onchange="uploadFile('familyAvatarFile', function(url){document.getElementById('familyAvatar').value=url;showToast('头像上传成功','success');})"></div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg">✨ 创建家庭</button>
+            </form>
+        </div>
+    </div>
+    <div class="panel">
+        <div class="panel-head"><div class="panel-title"><div class="panel-icon">🔗</div><h3>加入已有家庭</h3><span class="panel-sub">需要邀请码</span></div></div>
+        <div class="panel-body">
+            <form method="POST" action="/user/family/join">
+                <div class="form-group"><label>家庭邀请码 <span style="color:var(--danger);">*</span></label><input type="text" name="invite_code" class="form-control" placeholder="请输入 8 位邀请码" required style="text-transform:uppercase;letter-spacing:3px;font-family:monospace;font-size:16px;"></div>
+                <p class="text-muted mb-2" style="font-size:12px;line-height:1.7;">💡 请向家庭管理员获取邀请码。</p>
+                <button type="submit" class="btn btn-success btn-block btn-lg">🔐 加入家庭</button>
+            </form>
+            <div class="mt-3" style="padding:14px 16px;background:var(--cream);border-radius:var(--radius-sm);border-left:3px solid var(--coffee-400);font-size:12px;line-height:1.8;">
+                <div style="font-weight:600;color:var(--coffee-600);margin-bottom:6px;">🧪 测试邀请码（演示用）</div>
+                <div style="color:var(--text-muted);">
+                    <code style="padding:2px 8px;background:white;border-radius:4px;font-weight:600;color:var(--coffee-600);cursor:pointer;" onclick="document.querySelector('input[name=invite_code]').value=this.textContent;">HAPPY2024</code> 幸福之家 ·
+                    <code style="padding:2px 8px;background:white;border-radius:4px;font-weight:600;color:var(--coffee-600);cursor:pointer;" onclick="document.querySelector('input[name=invite_code]').value=this.textContent;">YUMMY2024</code> 美味小窝
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-block">创建家庭</button>
-        </form>
-    </div>
-    <div class="card">
-        <div class="card-header"><h3>🔗 加入家庭</h3></div>
-        <form method="POST" action="/user/family/join">
-            <div class="form-group">
-                <label>邀请码</label>
-                <input type="text" name="invite_code" class="form-control" placeholder="输入邀请码加入家庭" required>
-            </div>
-            <p class="text-muted mb-2" style="font-size:13px;">请向家庭管理员获取邀请码</p>
-            <button type="submit" class="btn btn-success btn-block">加入家庭</button>
-        </form>
-        <div class="mt-3" style="padding-top:16px;border-top:1px solid var(--border);">
-            <p class="text-muted" style="font-size:13px;">💡 测试邀请码: <strong>HAPPY2024</strong> (幸福之家) 或 <strong>YUMMY2024</strong> (美味小窝)</p>
         </div>
     </div>
 </div>
